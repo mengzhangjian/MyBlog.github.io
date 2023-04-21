@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KB55E0GLN2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KB55E0GLN2');
+</script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5557494619723966"
+     crossorigin="anonymous"></script>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Every failure is leading towards success.">
+    <meta name="keywords"  content="BY, BY Blog, 张建的博客, 张建, 计算机视觉, 机器人,Computer Vision">
+    <meta name="theme-color" content="#000000">
+    
+    <title>CUDA - 纹理内存 - 张建的博客 | BY Blog</title>
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/pwa/manifest.json">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <!-- Safari Webpage Icon    by-BY -->
+    <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="http://0.0.0.0:4000/2019/06/18/CUDA-%E7%BA%B9%E7%90%86%E5%86%85%E5%AD%98/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/hux-blog.min.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/css/syntax.css">
+
+    <!-- Custom Fonts -->
+    <!-- <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" type="text/css"> -->
+    <!-- Hux change font-awesome CDN to qiniu -->
+    <link href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5557494619723966"
+     crossorigin="anonymous"></script>
+
+    <!-- Hux Delete, sad but pending in China
+    <link href='http://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/
+    css'>
+    -->
+
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <!-- ga & ba script hoook -->
+    <script></script>
+</head>
+
+
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="">
+
+    <!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Alpha</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/">Home</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/about/">About</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/tags/">Tags</a>
+                    </li>
+                    
+                </ul>
+            </div>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    var __HuxNav__ = {
+        close: function(){
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        },
+        open: function(){
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+
+    // Bind Event
+    $toggle.addEventListener('click', function(e){
+        if ($navbar.className.indexOf('in') > 0) {
+            __HuxNav__.close()
+        }else{
+            __HuxNav__.open()
+        }
+    })
+
+    /**
+     * Since Fastclick is used to delegate 'touchstart' globally
+     * to hack 300ms delay in iOS by performing a fake 'click',
+     * Using 'e.stopPropagation' to stop 'touchstart' event from 
+     * $toggle/$collapse will break global delegation.
+     * 
+     * Instead, we use a 'e.target' filter to prevent handler
+     * added to document close HuxNav.  
+     *
+     * Also, we use 'click' instead of 'touchstart' as compromise
+     */
+    document.addEventListener('click', function(e){
+        if(e.target == $toggle) return;
+        if(e.target.className == 'icon-bar') return;
+        __HuxNav__.close();
+    })
+</script>
+
+
+    <!-- Image to hack wechat -->
+<!-- <img src="/img/icon_wechat.png" width="0" height="0"> -->
+<!-- <img src="/img/home-bg-o.jpg" width="0" height="0"> -->
+
+<!-- Post Header -->
+<style type="text/css">
+    header.intro-header{
+        position: relative;
+        background-image: url('/img/home-bg-o.jpg')
+    }
+
+    
+</style>
+<header class="intro-header" >
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KB55E0GLN2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KB55E0GLN2');
+</script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5557494619723966"
+     crossorigin="anonymous"></script>
+    <div class="header-mask"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <div class="post-heading">
+                    <div class="tags">
+                        
+                        <a class="tag" href="/tags/#CUDA" title="CUDA">CUDA</a>
+                        
+                    </div>
+                    <h1>CUDA - 纹理内存</h1>
+                    
+                    
+                    <h2 class="subheading">CUDA学习</h2>
+                    
+                    <span class="meta">Posted by BY    J on June 18, 2019</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+
+    <!-- Post Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                post-container">
+
+				<h2 id="本章目标">本章目标</h2>
+<ul>
+  <li>使用一维纹理内存</li>
+  <li>使用二维纹理内存</li>
+</ul>
+
+<h2 id="纹理内存简介">纹理内存简介</h2>
+<p>纹理内存是另一种只读内存，缓存在芯片上，可减少内存请求并提供高效带宽。纹理内存是专门为在内存访问模式中存在大量空间局部性的图形应用程序而设计。在某个程序中，这意味着一个线程读取的位置与邻近线程读取的位置很近。</p>
+
+<h2 id="热传导模拟代码">热传导模拟代码</h2>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include "cuda.h"
+#include "../common/book.h"
+#include "../common/image.h"
+
+#define DIM 1024
+#define PI 3.1415926535897932f
+#define MAX_TEMP 1.0f
+#define MIN_TEMP 0.0001f
+#define SPEED   0.25f
+
+// these exist on the GPU side
+texture&lt;float&gt;  texConstSrc;
+texture&lt;float&gt;  texIn;
+texture&lt;float&gt;  texOut;
+
+
+
+// this kernel takes in a 2-d array of floats
+// it updates the value-of-interest by a scaled value based
+// on itself and its nearest neighbors
+__global__ void blend_kernel( float *dst,
+                              bool dstOut ) {
+    // map from threadIdx/BlockIdx to pixel position
+    int x = threadIdx.x + blockIdx.x * blockDim.x;
+    int y = threadIdx.y + blockIdx.y * blockDim.y;
+    int offset = x + y * blockDim.x * gridDim.x;
+
+    int left = offset - 1;
+    int right = offset + 1;
+    if (x == 0)   left++;
+    if (x == DIM-1) right--;
+
+    int top = offset - DIM;
+    int bottom = offset + DIM;
+    if (y == 0)   top += DIM;
+    if (y == DIM-1) bottom -= DIM;
+
+    float   t, l, c, r, b;
+    if (dstOut) {
+        t = tex1Dfetch(texIn,top);
+        l = tex1Dfetch(texIn,left);
+        c = tex1Dfetch(texIn,offset);
+        r = tex1Dfetch(texIn,right);
+        b = tex1Dfetch(texIn,bottom);
+
+    } else {
+        t = tex1Dfetch(texOut,top);
+        l = tex1Dfetch(texOut,left);
+        c = tex1Dfetch(texOut,offset);
+        r = tex1Dfetch(texOut,right);
+        b = tex1Dfetch(texOut,bottom);
+    }
+    dst[offset] = c + SPEED * (t + b + r + l - 4 * c);
+}
+
+// NOTE - texOffsetConstSrc could either be passed as a
+// parameter to this function, or passed in __constant__ memory
+// if we declared it as a global above, it would be
+// a parameter here:
+// __global__ void copy_const_kernel( float *iptr,
+//                                    size_t texOffset )
+__global__ void copy_const_kernel( float *iptr ) {
+    // map from threadIdx/BlockIdx to pixel position
+    int x = threadIdx.x + blockIdx.x * blockDim.x;
+    int y = threadIdx.y + blockIdx.y * blockDim.y;
+    int offset = x + y * blockDim.x * gridDim.x;
+
+    float c = tex1Dfetch(texConstSrc,offset);
+    if (c != 0)
+        iptr[offset] = c;
+}
+
+// globals needed by the update routine
+struct DataBlock {
+    unsigned char   *output_bitmap;
+    float           *dev_inSrc;
+    float           *dev_outSrc;
+    float           *dev_constSrc;
+    IMAGE  *bitmap;
+
+    cudaEvent_t     start, stop;
+    float           totalTime;
+    float           frames;
+};
+
+void anim_gpu( DataBlock *d, int ticks ) {
+
+}
+
+// clean up memory allocated on the GPU
+void cleanup( DataBlock *d ) {
+    cudaUnbindTexture( texIn );
+    cudaUnbindTexture( texOut );
+    cudaUnbindTexture( texConstSrc );
+    HANDLE_ERROR( cudaFree( d-&gt;dev_inSrc ) );
+    HANDLE_ERROR( cudaFree( d-&gt;dev_outSrc ) );
+    HANDLE_ERROR( cudaFree( d-&gt;dev_constSrc ) );
+
+    HANDLE_ERROR( cudaEventDestroy( d-&gt;start ) );
+    HANDLE_ERROR( cudaEventDestroy( d-&gt;stop ) );
+}
+
+
+int main( void ) {
+    DataBlock   data;
+    IMAGE bitmap_image( DIM, DIM );
+    data.bitmap = &amp;bitmap_image;
+    data.totalTime = 0;
+    data.frames = 0;
+    HANDLE_ERROR( cudaEventCreate( &amp;data.start ) );
+    HANDLE_ERROR( cudaEventCreate( &amp;data.stop ) );
+
+    int imageSize = bitmap_image.image_size();
+
+    HANDLE_ERROR( cudaMalloc( (void**)&amp;data.output_bitmap,
+                              imageSize ) );
+
+    // assume float == 4 chars in size (ie rgba)
+    HANDLE_ERROR( cudaMalloc( (void**)&amp;data.dev_inSrc,
+                              imageSize ) );
+    HANDLE_ERROR( cudaMalloc( (void**)&amp;data.dev_outSrc,
+                              imageSize ) );
+    HANDLE_ERROR( cudaMalloc( (void**)&amp;data.dev_constSrc,
+                              imageSize ) );
+
+    HANDLE_ERROR( cudaBindTexture( NULL, texConstSrc,
+                                   data.dev_constSrc,
+                                   imageSize ) );
+
+    HANDLE_ERROR( cudaBindTexture( NULL, texIn,
+                                   data.dev_inSrc,
+                                   imageSize ) );
+
+    HANDLE_ERROR( cudaBindTexture( NULL, texOut,
+                                   data.dev_outSrc,
+                                   imageSize ) );
+
+    // intialize the constant data
+    float *temp = (float*)malloc( imageSize );
+    for (int i=0; i&lt;DIM*DIM; i++) {
+        temp[i] = 0;
+        int x = i % DIM;
+        int y = i / DIM;
+        if ((x&gt;300) &amp;&amp; (x&lt;600) &amp;&amp; (y&gt;310) &amp;&amp; (y&lt;601))
+            temp[i] = MAX_TEMP;
+    }
+    temp[DIM*100+100] = (MAX_TEMP + MIN_TEMP)/2;
+    temp[DIM*700+100] = MIN_TEMP;
+    temp[DIM*300+300] = MIN_TEMP;
+    temp[DIM*200+700] = MIN_TEMP;
+    for (int y=800; y&lt;900; y++) {
+        for (int x=400; x&lt;500; x++) {
+            temp[x+y*DIM] = MIN_TEMP;
+        }
+    }
+    HANDLE_ERROR( cudaMemcpy( data.dev_constSrc, temp,
+                              imageSize,
+                              cudaMemcpyHostToDevice ) );
+
+    // initialize the input data
+    for (int y=800; y&lt;DIM; y++) {
+        for (int x=0; x&lt;200; x++) {
+            temp[x+y*DIM] = MAX_TEMP;
+        }
+    }
+    HANDLE_ERROR( cudaMemcpy( data.dev_inSrc, temp,
+                              imageSize,
+                              cudaMemcpyHostToDevice ) );
+    free( temp );
+
+    int ticks=0;
+    bitmap_image.show_image(30);
+    while(1)
+    {
+        HANDLE_ERROR( cudaEventRecord( data.start, 0 ) );
+        dim3    blocks(DIM/16,DIM/16);
+        dim3    threads(16,16);
+        IMAGE  *bitmap = data.bitmap;
+
+        // since tex is global and bound, we have to use a flag to
+        // select which is in/out per iteration
+        volatile bool dstOut = true;
+        for (int i=0; i&lt;90; i++)
+        {
+            float   *in, *out;
+            if (dstOut)
+            {
+                in  = data.dev_inSrc;
+                out = data.dev_outSrc;
+            }
+            else
+            {
+                out = data.dev_inSrc;
+                in  = data.dev_outSrc;
+            }
+            copy_const_kernel&lt;&lt;&lt;blocks,threads&gt;&gt;&gt;( in );
+            blend_kernel&lt;&lt;&lt;blocks,threads&gt;&gt;&gt;( out, dstOut );
+            dstOut = !dstOut;
+        }
+        float_to_color&lt;&lt;&lt;blocks,threads&gt;&gt;&gt;( data.output_bitmap,
+                data.dev_inSrc );
+
+        HANDLE_ERROR( cudaMemcpy( bitmap-&gt;get_ptr(),
+                                  data.output_bitmap,
+                                  bitmap-&gt;image_size(),
+                                  cudaMemcpyDeviceToHost ) );
+
+        HANDLE_ERROR( cudaEventRecord( data.stop, 0 ) );
+        HANDLE_ERROR( cudaEventSynchronize( data.stop ) );
+        float   elapsedTime;
+        HANDLE_ERROR( cudaEventElapsedTime( &amp;elapsedTime,
+                                            data.start, data.stop ) );
+        data.totalTime += elapsedTime;
+        ++data.frames;
+        printf( "Average Time per frame:  %3.1f ms\n",
+                data.totalTime/data.frames  );
+
+        ticks++;
+        char key = bitmap_image.show_image(30);
+        if(key==27)
+        {
+            break;
+        }
+    }
+
+    cleanup(&amp;data);
+
+    return 0;
+}
+
+</code></pre></div></div>
+<p>掌握texture类型， cudaBindTexture, tex1Dfetch()与cudaUnbindTexture()
+ 本节有难度，待继续更新。</p>
+
+<h2 id="使用二维纹理内存">使用二维纹理内存</h2>
+
+<p>默认纹理引用都是一维的，因此增加代表维数的参数，这表示声明的是一个二维纹理引用</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>texture&lt;float, 2&gt; texConstSrc;
+texture&lt;float, 2&gt; texIn;
+texture&lt;float, 2&gt; texOut;
+</code></pre></div></div>
+<p>需要将tex1Dfetch()调用改为tex2D()调用，不需要再通过线性化offset计算偏移，可以直接通过X， Y访问纹理，也不用担心溢出问题。如果 x或者y小于0, tex2D()将返回0处的值。
+同时绑定二维纹理cudaBindTexture2D(),CUDA要求提供一个cudaChannelFormatDesc。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cudaChannelFormatDesc desc = cudaCreateChannelDesc&lt;float&gt;();
+</code></pre></div></div>
+<h2 id="热传导二维纹理代码">热传导二维纹理代码</h2>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include "cuda.h"
+#include "../common/book.h"
+#include "../common/image.h"
+
+#define DIM 1024
+#define PI 3.1415926535897932f
+#define MAX_TEMP 1.0f
+#define MIN_TEMP 0.0001f
+#define SPEED   0.25f
+
+// these exist on the GPU side
+texture&lt;float, 2&gt;  texConstSrc;
+texture&lt;float, 2&gt;  texIn;
+texture&lt;float, 2&gt;  texOut;
+
+
+
+// this kernel takes in a 2-d array of floats
+// it updates the value-of-interest by a scaled value based
+// on itself and its nearest neighbors
+__global__ void blend_kernel( float *dst,
+                              bool dstOut ) {
+    // map from threadIdx/BlockIdx to pixel position
+    int x = threadIdx.x + blockIdx.x * blockDim.x;
+    int y = threadIdx.y + blockIdx.y * blockDim.y;
+    int offset = x + y * blockDim.x * gridDim.x;
+
+
+    float   t, l, c, r, b;
+    if (dstOut) {
+        t = tex2D(texIn, x, y - 1);
+        l = tex2D(texIn, x -1, y);
+        c = tex2D(texIn, x, y);
+        r = tex2D(texIn, x + 1, y);
+        b = tex2D(texIn, x, y + 1);
+
+    } else {
+        t = tex2D(texOut, x, y - 1);
+        l = tex2D(texOut, x -1, y);
+        c = tex2D(texOut, x, y);
+        r = tex2D(texOut, x + 1, y);
+        b = tex2D(texOut, x, y + 1);
+    }
+    dst[offset] = c + SPEED * (t + b + r + l - 4 * c);
+}
+
+// NOTE - texOffsetConstSrc could either be passed as a
+// parameter to this function, or passed in __constant__ memory
+// if we declared it as a global above, it would be
+// a parameter here:
+// __global__ void copy_const_kernel( float *iptr,
+//                                    size_t texOffset )
+__global__ void copy_const_kernel( float *iptr ) {
+    // map from threadIdx/BlockIdx to pixel position
+    int x = threadIdx.x + blockIdx.x * blockDim.x;
+    int y = threadIdx.y + blockIdx.y * blockDim.y;
+    int offset = x + y * blockDim.x * gridDim.x;
+
+    float c = tex2D(texConstSrc, x, y);
+    if (c != 0)
+        iptr[offset] = c;
+}
+
+// globals needed by the update routine
+struct DataBlock {
+    unsigned char   *output_bitmap;
+    float           *dev_inSrc;
+    float           *dev_outSrc;
+    float           *dev_constSrc;
+    IMAGE  *bitmap;
+
+    cudaEvent_t     start, stop;
+    float           totalTime;
+    float           frames;
+};
+
+void anim_gpu( DataBlock *d, int ticks ) {
+
+}
+
+// clean up memory allocated on the GPU
+void cleanup( DataBlock *d ) {
+    cudaUnbindTexture( texIn );
+    cudaUnbindTexture( texOut );
+    cudaUnbindTexture( texConstSrc );
+    HANDLE_ERROR( cudaFree( d-&gt;dev_inSrc ) );
+    HANDLE_ERROR( cudaFree( d-&gt;dev_outSrc ) );
+    HANDLE_ERROR( cudaFree( d-&gt;dev_constSrc ) );
+
+    HANDLE_ERROR( cudaEventDestroy( d-&gt;start ) );
+    HANDLE_ERROR( cudaEventDestroy( d-&gt;stop ) );
+}
+
+
+int main( void ) {
+    DataBlock   data;
+    IMAGE bitmap_image( DIM, DIM );
+    data.bitmap = &amp;bitmap_image;
+    data.totalTime = 0;
+    data.frames = 0;
+    HANDLE_ERROR( cudaEventCreate( &amp;data.start ) );
+    HANDLE_ERROR( cudaEventCreate( &amp;data.stop ) );
+
+    int imageSize = bitmap_image.image_size();
+
+    HANDLE_ERROR( cudaMalloc( (void**)&amp;data.output_bitmap,
+                              imageSize ) );
+
+    // assume float == 4 chars in size (ie rgba)
+    HANDLE_ERROR( cudaMalloc( (void**)&amp;data.dev_inSrc,
+                              imageSize ) );
+    HANDLE_ERROR( cudaMalloc( (void**)&amp;data.dev_outSrc,
+                              imageSize ) );
+    HANDLE_ERROR( cudaMalloc( (void**)&amp;data.dev_constSrc,
+                              imageSize ) );
+
+    cudaChannelFormatDesc desc = cudaCreateChannelDesc&lt;float&gt;();
+    HANDLE_ERROR( cudaBindTexture2D( NULL, texConstSrc,
+                                   data.dev_constSrc,
+                                   desc, DIM, DIM, sizeof(float) * DIM) );
+
+    HANDLE_ERROR( cudaBindTexture2D( NULL, texIn,
+                                   data.dev_inSrc,
+                                   desc, DIM, DIM, sizeof(float) * DIM) );
+
+    HANDLE_ERROR( cudaBindTexture2D( NULL, texOut,
+                                   data.dev_outSrc,
+                                   desc, DIM, DIM, sizeof(float) * DIM) );
+
+    // intialize the constant data
+    float *temp = (float*)malloc( imageSize );
+    for (int i=0; i&lt;DIM*DIM; i++) {
+        temp[i] = 0;
+        int x = i % DIM;
+        int y = i / DIM;
+        if ((x&gt;300) &amp;&amp; (x&lt;600) &amp;&amp; (y&gt;310) &amp;&amp; (y&lt;601))
+            temp[i] = MAX_TEMP;
+    }
+    temp[DIM*100+100] = (MAX_TEMP + MIN_TEMP)/2;
+    temp[DIM*700+100] = MIN_TEMP;
+    temp[DIM*300+300] = MIN_TEMP;
+    temp[DIM*200+700] = MIN_TEMP;
+    for (int y=800; y&lt;900; y++) {
+        for (int x=400; x&lt;500; x++) {
+            temp[x+y*DIM] = MIN_TEMP;
+        }
+    }
+    HANDLE_ERROR( cudaMemcpy( data.dev_constSrc, temp,
+                              imageSize,
+                              cudaMemcpyHostToDevice ) );
+
+    // initialize the input data
+    for (int y=800; y&lt;DIM; y++) {
+        for (int x=0; x&lt;200; x++) {
+            temp[x+y*DIM] = MAX_TEMP;
+        }
+    }
+    HANDLE_ERROR( cudaMemcpy( data.dev_inSrc, temp,
+                              imageSize,
+                              cudaMemcpyHostToDevice ) );
+    free( temp );
+
+    int ticks=0;
+    bitmap_image.show_image(30);
+    while(1)
+    {
+        HANDLE_ERROR( cudaEventRecord( data.start, 0 ) );
+        dim3    blocks(DIM/16,DIM/16);
+        dim3    threads(16,16);
+        IMAGE  *bitmap = data.bitmap;
+
+        // since tex is global and bound, we have to use a flag to
+        // select which is in/out per iteration
+        volatile bool dstOut = true;
+        for (int i=0; i&lt;90; i++)
+        {
+            float   *in, *out;
+            if (dstOut)
+            {
+                in  = data.dev_inSrc;
+                out = data.dev_outSrc;
+            }
+            else
+            {
+                out = data.dev_inSrc;
+                in  = data.dev_outSrc;
+            }
+            copy_const_kernel&lt;&lt;&lt;blocks,threads&gt;&gt;&gt;( in );
+            blend_kernel&lt;&lt;&lt;blocks,threads&gt;&gt;&gt;( out, dstOut );
+            dstOut = !dstOut;
+        }
+        float_to_color&lt;&lt;&lt;blocks,threads&gt;&gt;&gt;( data.output_bitmap,
+                data.dev_inSrc );
+
+        HANDLE_ERROR( cudaMemcpy( bitmap-&gt;get_ptr(),
+                                  data.output_bitmap,
+                                  bitmap-&gt;image_size(),
+                                  cudaMemcpyDeviceToHost ) );
+
+        HANDLE_ERROR( cudaEventRecord( data.stop, 0 ) );
+        HANDLE_ERROR( cudaEventSynchronize( data.stop ) );
+        float   elapsedTime;
+        HANDLE_ERROR( cudaEventElapsedTime( &amp;elapsedTime,
+                                            data.start, data.stop ) );
+        data.totalTime += elapsedTime;
+        ++data.frames;
+        printf( "Average Time per frame:  %3.1f ms\n",
+                data.totalTime/data.frames  );
+
+        ticks++;
+        char key = bitmap_image.show_image(30);
+        if(key==27)
+        {
+            break;
+        }
+    }
+
+    cleanup(&amp;data);
+
+    return 0;
+}
+</code></pre></div></div>
+
+
+                <hr style="visibility: hidden;">
+
+                <ul class="pager">
+                    
+                    <li class="previous">
+                        <a href="/2019/06/17/CUDA-%E5%B8%B8%E9%87%8F%E5%86%85%E5%AD%98%E4%B8%8E%E4%BA%8B%E4%BB%B6/" data-toggle="tooltip" data-placement="top" title="CUDA - 常量内存与事件">
+                        Previous<br>
+                        <span>CUDA - 常量内存与事件</span>
+                        </a>
+                    </li>
+                    
+                    
+                    <li class="next">
+                        <a href="/2019/06/19/CUDA-%E5%8E%9F%E5%AD%90%E6%80%A7/" data-toggle="tooltip" data-placement="top" title="CUDA - 原子性">
+                        Next<br>
+                        <span>CUDA - 原子性</span>
+                        </a>
+                    </li>
+                    
+                </ul>
+
+
+                <!--Gitalk评论start  -->
+                
+                <!-- 引入Gitalk评论插件  -->
+                <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+                <script src="https://unpkg.com/gitalk@latest/dist/gitalk.min.js"></script>
+                <div id="gitalk-container"></div>
+                <!-- 引入一个生产md5的js，用于对id值进行处理，防止其过长 -->
+                <!-- Thank DF:https://github.com/NSDingFan/NSDingFan.github.io/issues/3#issuecomment-407496538 -->
+                <script src="/js/md5.min.js"></script>
+                <script type="text/javascript">
+                    var gitalk = new Gitalk({
+                    clientID: '6ff1a0fe3ca5d250981c',
+                    clientSecret: '3095f95a2ac5a609b4641e07ea0cd98547a6897f',
+                    repo: 'mengzhangjian.github.io',
+                    owner: 'mengzhangjian',
+                    admin: ['mengzhangjian'],
+                    distractionFreeMode: true,
+                    id: md5(location.pathname),
+                    });
+                    gitalk.render('gitalk-container');
+                </script>
+                
+                <!-- Gitalk end -->
+
+                
+
+            </div>  
+
+    <!-- Side Catalog Container -->
+        
+            <div class="
+                col-lg-2 col-lg-offset-0
+                visible-lg-block
+                sidebar-container
+                catalog-container">
+                <div class="side-catalog">
+                    <hr class="hidden-sm hidden-xs">
+                    <h5>
+                        <a class="catalog-toggle" href="#">CATALOG</a>
+                    </h5>
+                    <ul class="catalog-body"></ul>
+                </div>
+            </div>
+        
+
+    <!-- Sidebar Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <hr class="hidden-sm hidden-xs">
+                    <h5><a href="/tags/">FEATURED TAGS</a></h5>
+                    <div class="tags">
+        				
+                            
+        				
+                            
+        				
+                            
+                				<a href="/tags/#DeepLearning" title="DeepLearning" rel="2">
+                                    DeepLearning
+                                </a>
+                            
+        				
+                            
+                				<a href="/tags/#CUDA" title="CUDA" rel="9">
+                                    CUDA
+                                </a>
+                            
+        				
+                            
+        				
+        			</div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+                <hr>
+                <h5>FRIENDS</h5>
+                <ul class="list-inline">
+                    
+                        <li><a href="http://zhengwuyang.com">WY</a></li>
+                    
+                        <li><a href="http://www.jianshu.com/u/e71990ada2fd">简书·BY</a></li>
+                    
+                        <li><a href="https://apple.com">Apple</a></li>
+                    
+                        <li><a href="https://developer.apple.com/">Apple Developer</a></li>
+                    
+                </ul>
+                
+            </div>
+        </div>
+    </div>
+</article>
+
+
+
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+<!-- anchor-js, Doc:http://bryanbraun.github.io/anchorjs/ -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js",function(){
+        // BY Fix:去除标题前的‘#’ issues:<https://github.com/qiubaiying/qiubaiying.github.io/issues/137>
+        // anchors.options = {
+        //   visible: 'always',
+        //   placement: 'right',
+        //   icon: '#'
+        // };
+        anchors.add().remove('.intro-header h1').remove('.subheading').remove('.sidebar-container h5');
+    })
+</script>
+<style>
+    /* place left on bigger screen */
+    @media all and (min-width: 800px) {
+        .anchorjs-link{
+            position: absolute;
+            left: -0.75em;
+            font-size: 1.1em;
+            margin-top : -0.1em;
+        }
+    }
+</style>
+
+
+    <!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <ul class="list-inline text-center">
+                    
+                    <!-- add jianshu add target = "_blank" to <a> by BY -->
+                    
+                            <li>
+                                <a target="_blank" href="https://www.jianshu.com/u/33abd4ccb0fc">
+                                    <span class="fa-stack fa-lg">
+                                        <i class="fa fa-circle fa-stack-2x"></i>
+                                        <i class="fa  fa-stack-1x fa-inverse">简</i>
+                                    </span>
+                                </a>
+                            </li>
+                    
+                    
+
+                    <!-- add Weibo, Zhihu by Hux, add target = "_blank" to <a> by Hux -->
+                    
+                    <li>
+                        <a target="_blank" href="https://www.zhihu.com/people/alphaxone">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa  fa-stack-1x fa-inverse">知</i>
+                            </span>
+                        </a>
+                    </li>
+                    
+                    
+
+
+                    
+                    <li>
+                        <a target="_blank" href="https://www.facebook.com/100006075480199">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-facebook fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                    
+                    
+                    <li>
+                        <a target="_blank" href="https://github.com/mengzhangjian">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                    
+                    
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; Alpha 2023
+                    <br>
+                    Theme on <a href="https://github.com/mengzhangjian/mengzhangjian.github.io.git">GitHub</a> |
+                    <iframe
+                        style="margin-left: 2px; margin-bottom:-5px;"
+                        frameborder="0" scrolling="0" width="100px" height="20px"
+                        src="https://ghbtns.com/github-btn.html?user=mengzhangjian&repo=mengzhangjian.github.io&type=star&count=true" >
+                    </iframe>
+                </p>
+                <p class="copyright text-muted">
+                    <a href="https://beian.miit.gov.cn/" target="_blank">京ICP备2022032745号</a>
+                    <a href="https://www.beian.gov.cn/portal/registerSystemInfo/" target="_blank">京公网安备11011402013706号</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src="/js/jquery.min.js "></script>
+
+<!-- Bootstrap Core JavaScript -->
+<script src="/js/bootstrap.min.js "></script>
+
+<!-- Custom Theme JavaScript -->
+<script src="/js/hux-blog.min.js "></script>
+
+<!-- Service Worker -->
+
+<script type="text/javascript">
+    if(navigator.serviceWorker){
+        // For security reasons, a service worker can only control the pages that are in the same directory level or below it. That's why we put sw.js at ROOT level.
+        navigator.serviceWorker
+            .register('/sw.js')
+            .then((registration) => {console.log('Service Worker Registered. ', registration)})
+            .catch((error) => {console.log('ServiceWorker registration failed: ', error)})
+    }
+</script>
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+<!-- 
+     Because of the native support for backtick-style fenced code blocks 
+     right within the Markdown is landed in Github Pages, 
+     From V1.6, There is no need for Highlight.js, 
+     so Huxblog drops it officially.
+
+     - https://github.com/blog/2100-github-pages-now-faster-and-simpler-with-jekyll-3-0  
+     - https://help.github.com/articles/creating-and-highlighting-code-blocks/ 
+     - https://github.com/jneen/rouge/wiki/list-of-supported-languages-and-lexers   
+-->
+<!--
+    <script>
+        async("http://cdn.bootcss.com/highlight.js/8.6/highlight.min.js", function(){
+            hljs.initHighlightingOnLoad();
+        })
+    </script>
+    <link href="http://cdn.bootcss.com/highlight.js/8.6/styles/github.min.css" rel="stylesheet">
+-->
+
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if($('#tag_cloud').length !== 0){
+        async('/js/jquery.tagcloud.js',function(){
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: {start: '#bbbbee', end: '#0085a1'},
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js", function(){
+        var $nav = document.querySelector("nav");
+        if($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+<!-- Google Analytics -->
+
+<script>
+    // dynamic User by Hux
+    var _gaId = 'UA-121837119-1';
+    var _gaDomain = 'alphaxone.com';
+
+    // Originial
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', _gaId, _gaDomain);
+    ga('send', 'pageview');
+</script>
+
+
+
+<!-- Baidu Tongji -->
+
+
+
+
+<!-- Side Catalog -->
+
+<script type="text/javascript">
+    function generateCatalog (selector) {
+        var P = $('div.post-container'),a,n,t,l,i,c;
+        a = P.find('h1,h2,h3,h4,h5,h6');
+        a.each(function () {
+            n = $(this).prop('tagName').toLowerCase();
+            i = "#"+$(this).prop('id');
+            t = $(this).text();
+            c = $('<a href="'+i+'" rel="nofollow">'+t+'</a>');
+            l = $('<li class="'+n+'_nav"></li>').append(c);
+            $(selector).append(l);
+        });
+        return true;    
+    }
+
+    generateCatalog(".catalog-body");
+
+    // toggle side catalog
+    $(".catalog-toggle").click((function(e){
+        e.preventDefault();
+        $('.side-catalog').toggleClass("fold")
+    }))
+
+    /*
+     * Doc: https://github.com/davist11/jQuery-One-Page-Nav
+     * Fork by Hux to support padding
+     */
+    async("/js/jquery.nav.js", function () {
+        $('.catalog-body').onePageNav({
+            currentClass: "active",
+            changeHash: !1,
+            easing: "swing",
+            filter: "",
+            scrollSpeed: 700,
+            scrollOffset: 0,
+            scrollThreshold: .2,
+            begin: null,
+            end: null,
+            scrollChange: null,
+            padding: 80
+        });
+    });
+</script>
+
+
+
+
+
+<!-- Image to hack wechat -->
+<img src="/img/apple-touch-icon.png" width="0" height="0" />
+<!-- Migrate from head to bottom, no longer block render and still work -->
+
+</body>
+
+</html>

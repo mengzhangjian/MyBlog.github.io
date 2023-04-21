@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KB55E0GLN2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KB55E0GLN2');
+</script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5557494619723966"
+     crossorigin="anonymous"></script>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Every failure is leading towards success.">
+    <meta name="keywords"  content="BY, BY Blog, 张建的博客, 张建, 计算机视觉, 机器人,Computer Vision">
+    <meta name="theme-color" content="#000000">
+    
+    <title>CUDA-Performance considerations - 张建的博客 | BY Blog</title>
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/pwa/manifest.json">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <!-- Safari Webpage Icon    by-BY -->
+    <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="http://0.0.0.0:4000/2019/07/24/CUDA-%E5%85%A8%E5%B1%80%E5%86%85%E5%AD%98%E5%B8%A6%E5%AE%BD/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/hux-blog.min.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/css/syntax.css">
+
+    <!-- Custom Fonts -->
+    <!-- <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" type="text/css"> -->
+    <!-- Hux change font-awesome CDN to qiniu -->
+    <link href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5557494619723966"
+     crossorigin="anonymous"></script>
+
+    <!-- Hux Delete, sad but pending in China
+    <link href='http://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/
+    css'>
+    -->
+
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <!-- ga & ba script hoook -->
+    <script></script>
+</head>
+
+
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="">
+
+    <!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Alpha</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/">Home</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/about/">About</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/tags/">Tags</a>
+                    </li>
+                    
+                </ul>
+            </div>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    var __HuxNav__ = {
+        close: function(){
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        },
+        open: function(){
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+
+    // Bind Event
+    $toggle.addEventListener('click', function(e){
+        if ($navbar.className.indexOf('in') > 0) {
+            __HuxNav__.close()
+        }else{
+            __HuxNav__.open()
+        }
+    })
+
+    /**
+     * Since Fastclick is used to delegate 'touchstart' globally
+     * to hack 300ms delay in iOS by performing a fake 'click',
+     * Using 'e.stopPropagation' to stop 'touchstart' event from 
+     * $toggle/$collapse will break global delegation.
+     * 
+     * Instead, we use a 'e.target' filter to prevent handler
+     * added to document close HuxNav.  
+     *
+     * Also, we use 'click' instead of 'touchstart' as compromise
+     */
+    document.addEventListener('click', function(e){
+        if(e.target == $toggle) return;
+        if(e.target.className == 'icon-bar') return;
+        __HuxNav__.close();
+    })
+</script>
+
+
+    <!-- Image to hack wechat -->
+<!-- <img src="/img/icon_wechat.png" width="0" height="0"> -->
+<!-- <img src="/img/post-bg-mma-4.jpg" width="0" height="0"> -->
+
+<!-- Post Header -->
+<style type="text/css">
+    header.intro-header{
+        position: relative;
+        background-image: url('/img/post-bg-mma-4.jpg')
+    }
+
+    
+</style>
+<header class="intro-header" >
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KB55E0GLN2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KB55E0GLN2');
+</script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5557494619723966"
+     crossorigin="anonymous"></script>
+    <div class="header-mask"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <div class="post-heading">
+                    <div class="tags">
+                        
+                        <a class="tag" href="/tags/#CUDA" title="CUDA">CUDA</a>
+                        
+                    </div>
+                    <h1>CUDA-Performance considerations</h1>
+                    
+                    
+                    <h2 class="subheading">Programming Massively Parallel Processors</h2>
+                    
+                    <span class="meta">Posted by BY    J on July 24, 2019</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+
+    <!-- Post Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                post-container">
+
+				<p>性能考量</p>
+
+<p>在不同的应用程序中，由于不同因素，经常会遇到性能瓶颈。我们需要考虑清楚是算法策略还是硬件因素的影响，基于这个认识，本章将给出算法模式的类型对高性能表现的影响。</p>
+<h2 id="全局内存带宽">全局内存带宽</h2>
+<p>影响CUDA Kernel表现的主要因素之一是对全局内存的数据访问。本节将介绍Memory coalescing技术，该技术经常与tiling技术一起应用以高效利用全局内存带宽。
+CUDA设备中全局内存的实现是由DRAMs技术实现的。数据位存储在叫做DRAM cell的小电容器中。
+现代DRAM用并行技术提高数据访问率，通常叫做内存访问吞吐量。
+通常电容器越大，速度越快。但是现在每单元电容器的体积越来越小，所以速度并没有提升。
+每次访问DRAM一个位置，实际上访问了小范围的连续位置。DRAM上传感器都是并行工作的，每一个连续位置内的传感器都存储了数据的一位。一旦访问到一个，其他的都可以高速传输到处理器中。这种方式称为DRAM bursts。如果我们可以充分利用这种特性，DRAM则可以很快的提供数据，这比随意访问任意位置高效的多。
+认识到DRAM的burst特性后，当前GPU
+允许编程者将线程访问组织成适当形式以实现高效数据访问。这利用了warp线程中执行相同指令的特点。例如当线程0访问N位置，线程1访问N+1，等，则他们会被固化成单一指令进行访问。</p>
+
+<h2 id="53-warps-and-simd-hardware">5.3 Warps and SIMD HardWare</h2>
+<p>当前的CUDA设备会捆绑线程执行程序，此种策略会因为代码的类型造成表现差异。
+<strong>第三章，有介绍每一个线程块被分成了warps.Warps的执行是通过SIMD硬件执行的。这种技术可以减少硬件制作成本，低电力消耗以及实现固化内存访问。然而在实现过程中，warp的大小很容易改变。当前，所有的CUDA设备warp配置几乎都设置为每个warp包含32个线程。</strong>
+<img src="https://res.cloudinary.com/dsn0i1fsm/image/upload/v1561959731/blog/CUDA/v2_c1crjs.jpg" alt="display" />
+###说明：
+将线程组织成warp的动机如上图所示：每一个处理器有一个控制单元可以取并解码指令。相同的控制信号进入多个处理单元，每一个都执行了一个warp的线程中的一个。因为所有的处理单元被相同的指令控制，则执行结果的不同是因为register file中存储的不同数据。这在处理器设计中就叫做Single-Instruction-Multiple-Data(SIMD).
+现代处理器中的控制单元相当复杂。多个处理单元共享一个控制单元可以减小硬件制作成本以及电力消耗。这种设计在未来处理器中已成为一种趋势。
+对于一个block的大小不是32的倍数，最后的warp将被其他线程填充以凑够32个线程。
+对于二维数组，以行展开，组成warp.三维则以x,y组成二维数组，按z方向展开。
+在if-else的例子中，相同warp中的线程会执行不同的执行路径，我们定义这种情况为线程的diverge。Thread Divergence 会严重影响程序的执行时间，因为它们是串行执行。
+<strong>如果一个循环条件是建立在线程的索引序号上，那么就会发生线程的divergence.</strong>
+<strong>一个广泛发生线程divergence的原因是在映射线程到数据，处理边界条件时。</strong>不过，对表现的影响随着数据的大小发生变化。通常，向量越大，随表现的影响越小。（32的倍数，长度为100的向量，1/4个warp会D，1000，则1/32。）
+<strong>在一些重要的并行算法中，Control divergence会随着参与计算的线程的数量的增加而增加。下面将以reduction algorithm为例进行介绍</strong>
+<strong>reduction算法从数组值中取出一个值。该值可以是和，最大值胡总和最小值。所有这些类型的reduction算法的计算结构都相同。</strong>首先，可以通过串行计算实现，每个元素均被访问一次，算法的执行时间与元素数量成正比。算法复杂度为O(N)。
+因此，可以想到通过并行计算以减少执行时间。可以类比世界杯足球比赛。可以想象1024个队伍，通过10轮就可以得出最后的胜利者，前提是需要有足够的球场。
+下图展现了实现并行求和reduction的核函数。原始数组存储在全局内存中。每一个线程块减少了数组的一部分，通过将该部分的元素加载进共享内存并在这些元素上执行并行reduction。代码将输入数组X中的元素从全局内存中加载进共享内存中。reduction是原地进行的，这就意味着共享内存的一些元素会被部分求和值替代。核函数的for循环中，每一个迭代都会实现一轮reduction。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>__shared__ float partialSum[SIZE];
+partialSum[threadIdx.x] = X[blockIdx.x * blockDim.x + threadIdx.x];
+unsigned int t = threadIdx.x;
+for(unsigned int stride = 1; stride &lt; blockDim.x; stride *= 2)
+{
+__syncthreads();
+if(t % (2 * stride) == 0)
+    partialSum[t] += partialSum[t + stride];
+}
+</code></pre></div></div>
+<p>__syncthreads()确保了for-loop循环中之前迭代的所有部分和值已经被产生了并且之前的任意一个线程被允许开始当前迭代。此种方式下，所有进入第二次迭代的线程将利用第一次迭代产生的值。在第一轮迭代后，偶数元素将被第一轮的求和值替代掉。
+第二轮迭代后，元素下标索引的4的倍数的元素将被求和值替换掉。最后一轮，整个数组的总和将在partialSum[0]得到。
+for循环中，stride首先初始化为1.在第一次迭代时，if条件将选取偶数线程执行两个相邻元素的加法。下图展示了核函数的执行。线程与数组元素以水平方向展示。由线程执行的迭代从上到下在竖直方向展示。每一行则展示了迭代后数组的元素内容。
+<img src="https://res.cloudinary.com/dsn0i1fsm/image/upload/v1563638843/blog/CUDA/5-1_qp7fsz.jpg" alt="5-1" />
+Divergence分析:
+在第一轮迭代中偶数线程将执行加法操作。在接下来的迭代中，更少的线程将执行if之后的加法操作，但是所有的线程在每一轮迭代中仍将执行判断操作。此divergence可以通过对算法的轻微改变实现性能提升。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>__shared__ float partial[SIZE]
+partialSum[threadIdx.x] = X[blockIdx.x + blockDim.x * blockIdx.x];
+unsigned int t = threadIdx.x;
+for(unsigned int stride = blockDim.x / 2; stride &gt;=1; stride = stride&gt;&gt;1)
+{
+__syncthreads();
+if(t &lt; stride)
+    partialSum[t] += partialSum[t + stride]; // Line 7
+}
+</code></pre></div></div>
+<p>修改版本将stride初始化为数组长度的一半，表现差异性分析表现：
+两者为什么会有不同呢？答案就在执行Line 7的线程与不执行Line 7的线程，他们的位置差异。
+在第一轮迭代中，所有线程索引小于数组长度一半的threadIdx.x执行了Line7. 对于一个512个元素的数组， 第一轮迭代中，Thread 0到255执行了加法，256到511没有。在第一轮迭代之后，两个元素的加和存储在了元素0到255中。由于warp中32个线程，也就是warp 0到warp 7执行了加法，而8到15则略过了。由于每个warp中的所有线程都执行了相同指令，所以并没有divergence发生。
+读者应该注意到，此图中并没有完全消除divergence。在5th个循环开始，执行Line7的线程将小于32.但是这也将发生divergence的循环由10降到了5.
+<img src="https://res.cloudinary.com/dsn0i1fsm/image/upload/v1563638904/blog/CUDA/5-2_f6wtoo.jpg" alt="5-2" />
+两图中虽然改变很小，但是造成的算法表现差异却很大。这需要编程者很好的理解SIMD硬件中线程的执行，从而作出相应的调整。</p>
+
+
+                <hr style="visibility: hidden;">
+
+                <ul class="pager">
+                    
+                    <li class="previous">
+                        <a href="/2019/07/12/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E6%80%A7%E8%83%BD%E5%BD%B1%E5%93%8D%E5%88%86%E6%9E%90/" data-toggle="tooltip" data-placement="top" title="深度学习模型性能影响分析">
+                        Previous<br>
+                        <span>深度学习模型性能影响分析</span>
+                        </a>
+                    </li>
+                    
+                    
+                    <li class="next">
+                        <a href="/2019/08/08/CUDA-Parallel-patterns-convolution/" data-toggle="tooltip" data-placement="top" title="CUDA-Parallel patterns convolution">
+                        Next<br>
+                        <span>CUDA-Parallel patterns convolution</span>
+                        </a>
+                    </li>
+                    
+                </ul>
+
+
+                <!--Gitalk评论start  -->
+                
+                <!-- 引入Gitalk评论插件  -->
+                <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+                <script src="https://unpkg.com/gitalk@latest/dist/gitalk.min.js"></script>
+                <div id="gitalk-container"></div>
+                <!-- 引入一个生产md5的js，用于对id值进行处理，防止其过长 -->
+                <!-- Thank DF:https://github.com/NSDingFan/NSDingFan.github.io/issues/3#issuecomment-407496538 -->
+                <script src="/js/md5.min.js"></script>
+                <script type="text/javascript">
+                    var gitalk = new Gitalk({
+                    clientID: '6ff1a0fe3ca5d250981c',
+                    clientSecret: '3095f95a2ac5a609b4641e07ea0cd98547a6897f',
+                    repo: 'mengzhangjian.github.io',
+                    owner: 'mengzhangjian',
+                    admin: ['mengzhangjian'],
+                    distractionFreeMode: true,
+                    id: md5(location.pathname),
+                    });
+                    gitalk.render('gitalk-container');
+                </script>
+                
+                <!-- Gitalk end -->
+
+                
+
+            </div>  
+
+    <!-- Side Catalog Container -->
+        
+            <div class="
+                col-lg-2 col-lg-offset-0
+                visible-lg-block
+                sidebar-container
+                catalog-container">
+                <div class="side-catalog">
+                    <hr class="hidden-sm hidden-xs">
+                    <h5>
+                        <a class="catalog-toggle" href="#">CATALOG</a>
+                    </h5>
+                    <ul class="catalog-body"></ul>
+                </div>
+            </div>
+        
+
+    <!-- Sidebar Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <hr class="hidden-sm hidden-xs">
+                    <h5><a href="/tags/">FEATURED TAGS</a></h5>
+                    <div class="tags">
+        				
+                            
+        				
+                            
+        				
+                            
+                				<a href="/tags/#DeepLearning" title="DeepLearning" rel="2">
+                                    DeepLearning
+                                </a>
+                            
+        				
+                            
+                				<a href="/tags/#CUDA" title="CUDA" rel="9">
+                                    CUDA
+                                </a>
+                            
+        				
+                            
+        				
+        			</div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+                <hr>
+                <h5>FRIENDS</h5>
+                <ul class="list-inline">
+                    
+                        <li><a href="http://zhengwuyang.com">WY</a></li>
+                    
+                        <li><a href="http://www.jianshu.com/u/e71990ada2fd">简书·BY</a></li>
+                    
+                        <li><a href="https://apple.com">Apple</a></li>
+                    
+                        <li><a href="https://developer.apple.com/">Apple Developer</a></li>
+                    
+                </ul>
+                
+            </div>
+        </div>
+    </div>
+</article>
+
+
+
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+<!-- anchor-js, Doc:http://bryanbraun.github.io/anchorjs/ -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js",function(){
+        // BY Fix:去除标题前的‘#’ issues:<https://github.com/qiubaiying/qiubaiying.github.io/issues/137>
+        // anchors.options = {
+        //   visible: 'always',
+        //   placement: 'right',
+        //   icon: '#'
+        // };
+        anchors.add().remove('.intro-header h1').remove('.subheading').remove('.sidebar-container h5');
+    })
+</script>
+<style>
+    /* place left on bigger screen */
+    @media all and (min-width: 800px) {
+        .anchorjs-link{
+            position: absolute;
+            left: -0.75em;
+            font-size: 1.1em;
+            margin-top : -0.1em;
+        }
+    }
+</style>
+
+
+    <!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <ul class="list-inline text-center">
+                    
+                    <!-- add jianshu add target = "_blank" to <a> by BY -->
+                    
+                            <li>
+                                <a target="_blank" href="https://www.jianshu.com/u/33abd4ccb0fc">
+                                    <span class="fa-stack fa-lg">
+                                        <i class="fa fa-circle fa-stack-2x"></i>
+                                        <i class="fa  fa-stack-1x fa-inverse">简</i>
+                                    </span>
+                                </a>
+                            </li>
+                    
+                    
+
+                    <!-- add Weibo, Zhihu by Hux, add target = "_blank" to <a> by Hux -->
+                    
+                    <li>
+                        <a target="_blank" href="https://www.zhihu.com/people/alphaxone">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa  fa-stack-1x fa-inverse">知</i>
+                            </span>
+                        </a>
+                    </li>
+                    
+                    
+
+
+                    
+                    <li>
+                        <a target="_blank" href="https://www.facebook.com/100006075480199">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-facebook fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                    
+                    
+                    <li>
+                        <a target="_blank" href="https://github.com/mengzhangjian">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                    
+                    
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; Alpha 2023
+                    <br>
+                    Theme on <a href="https://github.com/mengzhangjian/mengzhangjian.github.io.git">GitHub</a> |
+                    <iframe
+                        style="margin-left: 2px; margin-bottom:-5px;"
+                        frameborder="0" scrolling="0" width="100px" height="20px"
+                        src="https://ghbtns.com/github-btn.html?user=mengzhangjian&repo=mengzhangjian.github.io&type=star&count=true" >
+                    </iframe>
+                </p>
+                <p class="copyright text-muted">
+                    <a href="https://beian.miit.gov.cn/" target="_blank">京ICP备2022032745号</a>
+                    <a href="https://www.beian.gov.cn/portal/registerSystemInfo/" target="_blank">京公网安备11011402013706号</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src="/js/jquery.min.js "></script>
+
+<!-- Bootstrap Core JavaScript -->
+<script src="/js/bootstrap.min.js "></script>
+
+<!-- Custom Theme JavaScript -->
+<script src="/js/hux-blog.min.js "></script>
+
+<!-- Service Worker -->
+
+<script type="text/javascript">
+    if(navigator.serviceWorker){
+        // For security reasons, a service worker can only control the pages that are in the same directory level or below it. That's why we put sw.js at ROOT level.
+        navigator.serviceWorker
+            .register('/sw.js')
+            .then((registration) => {console.log('Service Worker Registered. ', registration)})
+            .catch((error) => {console.log('ServiceWorker registration failed: ', error)})
+    }
+</script>
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+<!-- 
+     Because of the native support for backtick-style fenced code blocks 
+     right within the Markdown is landed in Github Pages, 
+     From V1.6, There is no need for Highlight.js, 
+     so Huxblog drops it officially.
+
+     - https://github.com/blog/2100-github-pages-now-faster-and-simpler-with-jekyll-3-0  
+     - https://help.github.com/articles/creating-and-highlighting-code-blocks/ 
+     - https://github.com/jneen/rouge/wiki/list-of-supported-languages-and-lexers   
+-->
+<!--
+    <script>
+        async("http://cdn.bootcss.com/highlight.js/8.6/highlight.min.js", function(){
+            hljs.initHighlightingOnLoad();
+        })
+    </script>
+    <link href="http://cdn.bootcss.com/highlight.js/8.6/styles/github.min.css" rel="stylesheet">
+-->
+
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if($('#tag_cloud').length !== 0){
+        async('/js/jquery.tagcloud.js',function(){
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: {start: '#bbbbee', end: '#0085a1'},
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js", function(){
+        var $nav = document.querySelector("nav");
+        if($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+<!-- Google Analytics -->
+
+<script>
+    // dynamic User by Hux
+    var _gaId = 'UA-121837119-1';
+    var _gaDomain = 'alphaxone.com';
+
+    // Originial
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', _gaId, _gaDomain);
+    ga('send', 'pageview');
+</script>
+
+
+
+<!-- Baidu Tongji -->
+
+
+
+
+<!-- Side Catalog -->
+
+<script type="text/javascript">
+    function generateCatalog (selector) {
+        var P = $('div.post-container'),a,n,t,l,i,c;
+        a = P.find('h1,h2,h3,h4,h5,h6');
+        a.each(function () {
+            n = $(this).prop('tagName').toLowerCase();
+            i = "#"+$(this).prop('id');
+            t = $(this).text();
+            c = $('<a href="'+i+'" rel="nofollow">'+t+'</a>');
+            l = $('<li class="'+n+'_nav"></li>').append(c);
+            $(selector).append(l);
+        });
+        return true;    
+    }
+
+    generateCatalog(".catalog-body");
+
+    // toggle side catalog
+    $(".catalog-toggle").click((function(e){
+        e.preventDefault();
+        $('.side-catalog').toggleClass("fold")
+    }))
+
+    /*
+     * Doc: https://github.com/davist11/jQuery-One-Page-Nav
+     * Fork by Hux to support padding
+     */
+    async("/js/jquery.nav.js", function () {
+        $('.catalog-body').onePageNav({
+            currentClass: "active",
+            changeHash: !1,
+            easing: "swing",
+            filter: "",
+            scrollSpeed: 700,
+            scrollOffset: 0,
+            scrollThreshold: .2,
+            begin: null,
+            end: null,
+            scrollChange: null,
+            padding: 80
+        });
+    });
+</script>
+
+
+
+
+
+<!-- Image to hack wechat -->
+<img src="/img/apple-touch-icon.png" width="0" height="0" />
+<!-- Migrate from head to bottom, no longer block render and still work -->
+
+</body>
+
+</html>

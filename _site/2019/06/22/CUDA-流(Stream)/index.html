@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KB55E0GLN2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KB55E0GLN2');
+</script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5557494619723966"
+     crossorigin="anonymous"></script>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Every failure is leading towards success.">
+    <meta name="keywords"  content="BY, BY Blog, 张建的博客, 张建, 计算机视觉, 机器人,Computer Vision">
+    <meta name="theme-color" content="#000000">
+    
+    <title>CUDA - 流(Stream) - 张建的博客 | BY Blog</title>
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/pwa/manifest.json">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <!-- Safari Webpage Icon    by-BY -->
+    <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="http://0.0.0.0:4000/2019/06/22/CUDA-%E6%B5%81(Stream)/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/hux-blog.min.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/css/syntax.css">
+
+    <!-- Custom Fonts -->
+    <!-- <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" type="text/css"> -->
+    <!-- Hux change font-awesome CDN to qiniu -->
+    <link href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5557494619723966"
+     crossorigin="anonymous"></script>
+
+    <!-- Hux Delete, sad but pending in China
+    <link href='http://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/
+    css'>
+    -->
+
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <!-- ga & ba script hoook -->
+    <script></script>
+</head>
+
+
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="">
+
+    <!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Alpha</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/">Home</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/about/">About</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/tags/">Tags</a>
+                    </li>
+                    
+                </ul>
+            </div>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    var __HuxNav__ = {
+        close: function(){
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        },
+        open: function(){
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+
+    // Bind Event
+    $toggle.addEventListener('click', function(e){
+        if ($navbar.className.indexOf('in') > 0) {
+            __HuxNav__.close()
+        }else{
+            __HuxNav__.open()
+        }
+    })
+
+    /**
+     * Since Fastclick is used to delegate 'touchstart' globally
+     * to hack 300ms delay in iOS by performing a fake 'click',
+     * Using 'e.stopPropagation' to stop 'touchstart' event from 
+     * $toggle/$collapse will break global delegation.
+     * 
+     * Instead, we use a 'e.target' filter to prevent handler
+     * added to document close HuxNav.  
+     *
+     * Also, we use 'click' instead of 'touchstart' as compromise
+     */
+    document.addEventListener('click', function(e){
+        if(e.target == $toggle) return;
+        if(e.target.className == 'icon-bar') return;
+        __HuxNav__.close();
+    })
+</script>
+
+
+    <!-- Image to hack wechat -->
+<!-- <img src="/img/icon_wechat.png" width="0" height="0"> -->
+<!-- <img src="/img/home-bg-o.jpg" width="0" height="0"> -->
+
+<!-- Post Header -->
+<style type="text/css">
+    header.intro-header{
+        position: relative;
+        background-image: url('/img/home-bg-o.jpg')
+    }
+
+    
+</style>
+<header class="intro-header" >
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KB55E0GLN2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KB55E0GLN2');
+</script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5557494619723966"
+     crossorigin="anonymous"></script>
+    <div class="header-mask"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <div class="post-heading">
+                    <div class="tags">
+                        
+                        <a class="tag" href="/tags/#CUDA" title="CUDA">CUDA</a>
+                        
+                    </div>
+                    <h1>CUDA - 流(Stream)</h1>
+                    
+                    
+                    <h2 class="subheading">CUDA学习</h2>
+                    
+                    <span class="meta">Posted by BY    J on June 22, 2019</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+
+    <!-- Post Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                post-container">
+
+				<h2 id="本章目标">本章目标</h2>
+<ul>
+  <li>了解如何分配页锁定（Page-Locked）的主机内存</li>
+  <li>了解CUDA流的概念</li>
+  <li>了解如何使用CUDA流来加速应用程序</li>
+</ul>
+
+<p>malloc()与cudaHostAlloc()分配的内存之间存在着一个巨大的差异。C库函数malloc()将分配标准的，可分页的主机内存。而cudaHostAlloc()将分配页锁定的主机内存。页锁定内存也称为固定内存（Pinned Memory）或者不可分页内存，它有一个重要属性：操作系统将不会对这块内存分页并交换到磁盘上，从而确保了该内存始终驻留在物理内存中。
+由于 GPU知道内存的物理地址，因为可以通过直接内存访问（Direct Memory Access）DMA技术在GPU和主机之间复制数据。
+每当从可分页内存中执行复制操作时，复制速度将受限于PCIE的传输速度和系统前端总线速度相对较低的一方。
+如果将所有malloc进行替换，则会更快的耗尽系统内存。
+建议：仅对cudaMemcpy()调用中的源内存或者目标内存，才使用页锁定内存，并且在不需要它们时进行立即释放。</p>
+
+<h2 id="测试程序">测试程序</h2>
+<p>测试目标： 主要测试cudaMemcpy()在可分配内存和页锁定内存上的性能。分配一个GPU缓冲区以及一个大小相等的主机缓冲区，然后在这两个缓冲区之间执行复制操作。并设置CUDA事件进行精确的时间统计。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>float cuda_malloc_host_test(int size, bool up){
+
+    int *a, *dev_a;
+    float elapsedTime;
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&amp;start);
+    cudaEventCreate(&amp;stop);
+
+    cudaHostAlloc( (void**)&amp;a, size * sizeof(*a), cudaHostAllocDefault);
+    cudaMalloc((void**)&amp;dev_a, size * sizeof(*dev_a));
+
+    cudaEventRecord(start, 0);
+    for(int i = 0; i &lt; 100; i++){
+
+        if(up)
+            cudaMemcpy(dev_a, a, size * sizeof(*a), cudaMemcpyHostToDevice);
+        else
+            cudaMemcpy(a, dev_a, size * sizeof(*dev_a), cudaMemcpyDeviceToHost);
+    }
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+
+    cudaEventElapsedTime(&amp;elapsedTime, start, stop);
+    cudaFreeHost(a);
+    cudaFree(dev_a);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
+    return elapsedTime;
+}
+</code></pre></div></div>
+<p>以上可以看到，cudaHostAlloc()与malloc()分配的内存在使用方式上是相同的，不同的是最后一个参数cudaHostAllocDefault.我们可以通过修改该参数来修改cudaHostAlloc()的行为，并分配不同形式的固定主机内存。如果要释放内存，必须使用cudaFreeHost()。</p>
+
+<h2 id="cuda流">CUDA流</h2>
+<p>CUDA流表示一个GPU操作队列，并且队列上的操作将以指定的顺序执行。我们可以在流中添加一些操作。将这些操作添加的顺序就是它们的执行顺序。你可以将每个流视为GPU上的一个任务，并且这些任务可以并行执行。</p>
+<h3 id="使用单个cuda流">使用单个CUDA流</h3>
+<p>首先选择一个支持设备重叠功能的设备（Device Overlap）.支持设备重叠功能的GPU能够在执行一个CUDA核函数的同时,还能在设备与主机之间执行复制操作. 我们将使用多个流来实现这种计算与数据的传输的重叠,但首先来看如何创建和使用一个流.</p>
+
+<p>此次采用cudaMemcpyAsync()在GPU与主机之间复制数据.cudaMemcpy()函数是以同步的方式进行的,当函数返回时,复制操作已经完成.<strong>任何传递给cudaMemcpyAsync()的主机内存指针都必须已经通过cudaHostAlloc()分配好内存.也就是,你只能以异步的方式对页锁定内存进行复制操作.</strong></p>
+
+<p>调用cudaStreamSynchronize()指定想要等待的流.</p>
+
+<p>cudaStreamDestroy()销毁流.</p>
+
+<h2 id="使用多个cuda流">使用多个CUDA流</h2>
+<p>在任何支持内存复制和核函数执行相互重叠的设备上,当使用多个流时,应用程序的性能都会整体提升.
+建立两个流,stream0 和stream1两个流交替执行,实验测试性能确实提升.</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  for(int i = 0; i &lt; FULL_DATA_SIZE;i += N * 2){
+        cudaMemcpyAsync(dev_a0, host_a + i, N* sizeof(int), cudaMemcpyHostToDevice, stream0);
+        cudaMemcpyAsync(dev_b0, host_b + i, N* sizeof(int), cudaMemcpyHostToDevice, stream0);
+        kernel&lt;&lt;&lt;N/256, 256, 0, stream0&gt;&gt;&gt;(dev_a0, dev_b0, dev_c0);
+        cudaMemcpyAsync(host_c + i, dev_c0, N* sizeof(int), cudaMemcpyDeviceToHost, stream0);
+
+        cudaMemcpyAsync(dev_a1, host_a + i + N, N* sizeof(int), cudaMemcpyHostToDevice, stream1);
+        cudaMemcpyAsync(dev_b1, host_b + i +N, N* sizeof(int), cudaMemcpyHostToDevice, stream1);
+        kernel&lt;&lt;&lt;N/256, 256, 0, stream0&gt;&gt;&gt;(dev_a1, dev_b1, dev_c1);
+        cudaMemcpyAsync(host_c + i + N, dev_c1, N* sizeof(int), cudaMemcpyDeviceToHost, stream1);
+}
+</code></pre></div></div>
+<h2 id="gpu的工作调度机制">GPU的工作调度机制</h2>
+<p>需要确切理解GPU中流的执行机制,逻辑上来讲,不同流的运行是相互独立的,但是硬件上并没有流的概念,而是包含一个或多个引擎来执行内存的操作复制,以及执行核函数的引擎.<strong>书中图10.4,使用多个GPU流时的程序执行时间线,由于第0个流中将C复制回主机需要等待核函数执行完成才能进行,因此第1个流中虽然将a和b复制到GPU 的操作是完全独立的,但全被阻塞了.</strong>因此我们需要知道将操作放入流中的顺序将影响着CUDA驱动程序调度这些操作以及执行的方式.</p>
+<h2 id="高效地使用多个cuda流">高效地使用多个CUDA流</h2>
+<p>要解决上述问题,在将操作放入流的队列时应采用宽度优先的方式,而非深度优先的方式.也就是说,我们并不是一次性添加第0个流的所有操作,而是两个流的操作交替进行添加.</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  for(int i = 0; i &lt; FULL_DATA_SIZE;i += N * 2){
+        cudaMemcpyAsync(dev_a0, host_a + i, N* sizeof(int), cudaMemcpyHostToDevice, stream0);
+        cudaMemcpyAsync(dev_b0, host_b + i, N* sizeof(int), cudaMemcpyHostToDevice, stream0);
+        cudaMemcpyAsync(dev_a1, host_a + i + N, N* sizeof(int), cudaMemcpyHostToDevice, stream1);
+        cudaMemcpyAsync(dev_b1, host_b + i +N, N* sizeof(int), cudaMemcpyHostToDevice, stream1);
+        kernel&lt;&lt;&lt;N/256, 256, 0, stream0&gt;&gt;&gt;(dev_a0, dev_b0, dev_c0);
+        kernel&lt;&lt;&lt;N/256, 256, 0, stream0&gt;&gt;&gt;(dev_a1, dev_b1, dev_c1);      
+        cudaMemcpyAsync(host_c + i, dev_c0, N* sizeof(int), cudaMemcpyDeviceToHost, stream0);
+        cudaMemcpyAsync(host_c + i + N, dev_c1, N* sizeof(int), cudaMemcpyDeviceToHost, stream1);
+
+    }
+</code></pre></div></div>
+<p>执行顺图可看书中图10.5,也可比较上述两段代码.</p>
+<h2 id="总结">总结</h2>
+<p>本节介绍了在CUDA C程序中实现任务级的并行性.通过使用多个CUDA流,我们可以使GPU在执行核函数的同时,还能在主机和GPU之间执行复制操作.然而,采用这种方式时,需要注意里两个因素.首先,需要通过cudaHostAlloc()分配主机内存,因此接下来需要通过cudaMemcpyAsync()对内存复制操作进行排队,而异步复制操作需要在固定缓冲区执行.其次,我们需要知道添加操作到流中的顺序会对重叠情况产生影响.通常,应该采用宽度优先或者轮询的方式将工作分配到流.</p>
+
+
+
+                <hr style="visibility: hidden;">
+
+                <ul class="pager">
+                    
+                    <li class="previous">
+                        <a href="/2019/06/19/CUDA-%E5%8E%9F%E5%AD%90%E6%80%A7/" data-toggle="tooltip" data-placement="top" title="CUDA - 原子性">
+                        Previous<br>
+                        <span>CUDA - 原子性</span>
+                        </a>
+                    </li>
+                    
+                    
+                    <li class="next">
+                        <a href="/2019/06/23/%E5%A4%9AGPU%E7%B3%BB%E7%BB%9F%E4%B8%8A%E7%9A%84CUDA-C/" data-toggle="tooltip" data-placement="top" title="CUDA - 多GPU系统上的CUDA C">
+                        Next<br>
+                        <span>CUDA - 多GPU系统上的CUDA C</span>
+                        </a>
+                    </li>
+                    
+                </ul>
+
+
+                <!--Gitalk评论start  -->
+                
+                <!-- 引入Gitalk评论插件  -->
+                <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+                <script src="https://unpkg.com/gitalk@latest/dist/gitalk.min.js"></script>
+                <div id="gitalk-container"></div>
+                <!-- 引入一个生产md5的js，用于对id值进行处理，防止其过长 -->
+                <!-- Thank DF:https://github.com/NSDingFan/NSDingFan.github.io/issues/3#issuecomment-407496538 -->
+                <script src="/js/md5.min.js"></script>
+                <script type="text/javascript">
+                    var gitalk = new Gitalk({
+                    clientID: '6ff1a0fe3ca5d250981c',
+                    clientSecret: '3095f95a2ac5a609b4641e07ea0cd98547a6897f',
+                    repo: 'mengzhangjian.github.io',
+                    owner: 'mengzhangjian',
+                    admin: ['mengzhangjian'],
+                    distractionFreeMode: true,
+                    id: md5(location.pathname),
+                    });
+                    gitalk.render('gitalk-container');
+                </script>
+                
+                <!-- Gitalk end -->
+
+                
+
+            </div>  
+
+    <!-- Side Catalog Container -->
+        
+            <div class="
+                col-lg-2 col-lg-offset-0
+                visible-lg-block
+                sidebar-container
+                catalog-container">
+                <div class="side-catalog">
+                    <hr class="hidden-sm hidden-xs">
+                    <h5>
+                        <a class="catalog-toggle" href="#">CATALOG</a>
+                    </h5>
+                    <ul class="catalog-body"></ul>
+                </div>
+            </div>
+        
+
+    <!-- Sidebar Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <hr class="hidden-sm hidden-xs">
+                    <h5><a href="/tags/">FEATURED TAGS</a></h5>
+                    <div class="tags">
+        				
+                            
+        				
+                            
+        				
+                            
+                				<a href="/tags/#DeepLearning" title="DeepLearning" rel="2">
+                                    DeepLearning
+                                </a>
+                            
+        				
+                            
+                				<a href="/tags/#CUDA" title="CUDA" rel="9">
+                                    CUDA
+                                </a>
+                            
+        				
+                            
+        				
+        			</div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+                <hr>
+                <h5>FRIENDS</h5>
+                <ul class="list-inline">
+                    
+                        <li><a href="http://zhengwuyang.com">WY</a></li>
+                    
+                        <li><a href="http://www.jianshu.com/u/e71990ada2fd">简书·BY</a></li>
+                    
+                        <li><a href="https://apple.com">Apple</a></li>
+                    
+                        <li><a href="https://developer.apple.com/">Apple Developer</a></li>
+                    
+                </ul>
+                
+            </div>
+        </div>
+    </div>
+</article>
+
+
+
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+<!-- anchor-js, Doc:http://bryanbraun.github.io/anchorjs/ -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js",function(){
+        // BY Fix:去除标题前的‘#’ issues:<https://github.com/qiubaiying/qiubaiying.github.io/issues/137>
+        // anchors.options = {
+        //   visible: 'always',
+        //   placement: 'right',
+        //   icon: '#'
+        // };
+        anchors.add().remove('.intro-header h1').remove('.subheading').remove('.sidebar-container h5');
+    })
+</script>
+<style>
+    /* place left on bigger screen */
+    @media all and (min-width: 800px) {
+        .anchorjs-link{
+            position: absolute;
+            left: -0.75em;
+            font-size: 1.1em;
+            margin-top : -0.1em;
+        }
+    }
+</style>
+
+
+    <!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <ul class="list-inline text-center">
+                    
+                    <!-- add jianshu add target = "_blank" to <a> by BY -->
+                    
+                            <li>
+                                <a target="_blank" href="https://www.jianshu.com/u/33abd4ccb0fc">
+                                    <span class="fa-stack fa-lg">
+                                        <i class="fa fa-circle fa-stack-2x"></i>
+                                        <i class="fa  fa-stack-1x fa-inverse">简</i>
+                                    </span>
+                                </a>
+                            </li>
+                    
+                    
+
+                    <!-- add Weibo, Zhihu by Hux, add target = "_blank" to <a> by Hux -->
+                    
+                    <li>
+                        <a target="_blank" href="https://www.zhihu.com/people/alphaxone">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa  fa-stack-1x fa-inverse">知</i>
+                            </span>
+                        </a>
+                    </li>
+                    
+                    
+
+
+                    
+                    <li>
+                        <a target="_blank" href="https://www.facebook.com/100006075480199">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-facebook fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                    
+                    
+                    <li>
+                        <a target="_blank" href="https://github.com/mengzhangjian">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                    
+                    
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; Alpha 2023
+                    <br>
+                    Theme on <a href="https://github.com/mengzhangjian/mengzhangjian.github.io.git">GitHub</a> |
+                    <iframe
+                        style="margin-left: 2px; margin-bottom:-5px;"
+                        frameborder="0" scrolling="0" width="100px" height="20px"
+                        src="https://ghbtns.com/github-btn.html?user=mengzhangjian&repo=mengzhangjian.github.io&type=star&count=true" >
+                    </iframe>
+                </p>
+                <p class="copyright text-muted">
+                    <a href="https://beian.miit.gov.cn/" target="_blank">京ICP备2022032745号</a>
+                    <a href="https://www.beian.gov.cn/portal/registerSystemInfo/" target="_blank">京公网安备11011402013706号</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src="/js/jquery.min.js "></script>
+
+<!-- Bootstrap Core JavaScript -->
+<script src="/js/bootstrap.min.js "></script>
+
+<!-- Custom Theme JavaScript -->
+<script src="/js/hux-blog.min.js "></script>
+
+<!-- Service Worker -->
+
+<script type="text/javascript">
+    if(navigator.serviceWorker){
+        // For security reasons, a service worker can only control the pages that are in the same directory level or below it. That's why we put sw.js at ROOT level.
+        navigator.serviceWorker
+            .register('/sw.js')
+            .then((registration) => {console.log('Service Worker Registered. ', registration)})
+            .catch((error) => {console.log('ServiceWorker registration failed: ', error)})
+    }
+</script>
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+<!-- 
+     Because of the native support for backtick-style fenced code blocks 
+     right within the Markdown is landed in Github Pages, 
+     From V1.6, There is no need for Highlight.js, 
+     so Huxblog drops it officially.
+
+     - https://github.com/blog/2100-github-pages-now-faster-and-simpler-with-jekyll-3-0  
+     - https://help.github.com/articles/creating-and-highlighting-code-blocks/ 
+     - https://github.com/jneen/rouge/wiki/list-of-supported-languages-and-lexers   
+-->
+<!--
+    <script>
+        async("http://cdn.bootcss.com/highlight.js/8.6/highlight.min.js", function(){
+            hljs.initHighlightingOnLoad();
+        })
+    </script>
+    <link href="http://cdn.bootcss.com/highlight.js/8.6/styles/github.min.css" rel="stylesheet">
+-->
+
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if($('#tag_cloud').length !== 0){
+        async('/js/jquery.tagcloud.js',function(){
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: {start: '#bbbbee', end: '#0085a1'},
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js", function(){
+        var $nav = document.querySelector("nav");
+        if($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+<!-- Google Analytics -->
+
+<script>
+    // dynamic User by Hux
+    var _gaId = 'UA-121837119-1';
+    var _gaDomain = 'alphaxone.com';
+
+    // Originial
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', _gaId, _gaDomain);
+    ga('send', 'pageview');
+</script>
+
+
+
+<!-- Baidu Tongji -->
+
+
+
+
+<!-- Side Catalog -->
+
+<script type="text/javascript">
+    function generateCatalog (selector) {
+        var P = $('div.post-container'),a,n,t,l,i,c;
+        a = P.find('h1,h2,h3,h4,h5,h6');
+        a.each(function () {
+            n = $(this).prop('tagName').toLowerCase();
+            i = "#"+$(this).prop('id');
+            t = $(this).text();
+            c = $('<a href="'+i+'" rel="nofollow">'+t+'</a>');
+            l = $('<li class="'+n+'_nav"></li>').append(c);
+            $(selector).append(l);
+        });
+        return true;    
+    }
+
+    generateCatalog(".catalog-body");
+
+    // toggle side catalog
+    $(".catalog-toggle").click((function(e){
+        e.preventDefault();
+        $('.side-catalog').toggleClass("fold")
+    }))
+
+    /*
+     * Doc: https://github.com/davist11/jQuery-One-Page-Nav
+     * Fork by Hux to support padding
+     */
+    async("/js/jquery.nav.js", function () {
+        $('.catalog-body').onePageNav({
+            currentClass: "active",
+            changeHash: !1,
+            easing: "swing",
+            filter: "",
+            scrollSpeed: 700,
+            scrollOffset: 0,
+            scrollThreshold: .2,
+            begin: null,
+            end: null,
+            scrollChange: null,
+            padding: 80
+        });
+    });
+</script>
+
+
+
+
+
+<!-- Image to hack wechat -->
+<img src="/img/apple-touch-icon.png" width="0" height="0" />
+<!-- Migrate from head to bottom, no longer block render and still work -->
+
+</body>
+
+</html>

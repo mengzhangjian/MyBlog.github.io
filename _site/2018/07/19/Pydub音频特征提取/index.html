@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KB55E0GLN2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KB55E0GLN2');
+</script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5557494619723966"
+     crossorigin="anonymous"></script>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Every failure is leading towards success.">
+    <meta name="keywords"  content="BY, BY Blog, 张建的博客, 张建, 计算机视觉, 机器人,Computer Vision">
+    <meta name="theme-color" content="#000000">
+    
+    <title>频谱处理可视化教程 - 张建的博客 | BY Blog</title>
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/pwa/manifest.json">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <!-- Safari Webpage Icon    by-BY -->
+    <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="http://0.0.0.0:4000/2018/07/19/Pydub%E9%9F%B3%E9%A2%91%E7%89%B9%E5%BE%81%E6%8F%90%E5%8F%96/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/hux-blog.min.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/css/syntax.css">
+
+    <!-- Custom Fonts -->
+    <!-- <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" type="text/css"> -->
+    <!-- Hux change font-awesome CDN to qiniu -->
+    <link href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5557494619723966"
+     crossorigin="anonymous"></script>
+
+    <!-- Hux Delete, sad but pending in China
+    <link href='http://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/
+    css'>
+    -->
+
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <!-- ga & ba script hoook -->
+    <script></script>
+</head>
+
+
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="">
+
+    <!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Alpha</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/">Home</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/about/">About</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/tags/">Tags</a>
+                    </li>
+                    
+                </ul>
+            </div>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    var __HuxNav__ = {
+        close: function(){
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        },
+        open: function(){
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+
+    // Bind Event
+    $toggle.addEventListener('click', function(e){
+        if ($navbar.className.indexOf('in') > 0) {
+            __HuxNav__.close()
+        }else{
+            __HuxNav__.open()
+        }
+    })
+
+    /**
+     * Since Fastclick is used to delegate 'touchstart' globally
+     * to hack 300ms delay in iOS by performing a fake 'click',
+     * Using 'e.stopPropagation' to stop 'touchstart' event from 
+     * $toggle/$collapse will break global delegation.
+     * 
+     * Instead, we use a 'e.target' filter to prevent handler
+     * added to document close HuxNav.  
+     *
+     * Also, we use 'click' instead of 'touchstart' as compromise
+     */
+    document.addEventListener('click', function(e){
+        if(e.target == $toggle) return;
+        if(e.target.className == 'icon-bar') return;
+        __HuxNav__.close();
+    })
+</script>
+
+
+    <!-- Image to hack wechat -->
+<!-- <img src="/img/icon_wechat.png" width="0" height="0"> -->
+<!-- <img src="/img/post-bg-cook.jpg" width="0" height="0"> -->
+
+<!-- Post Header -->
+<style type="text/css">
+    header.intro-header{
+        position: relative;
+        background-image: url('/img/post-bg-cook.jpg')
+    }
+
+    
+</style>
+<header class="intro-header" >
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KB55E0GLN2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KB55E0GLN2');
+</script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5557494619723966"
+     crossorigin="anonymous"></script>
+    <div class="header-mask"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <div class="post-heading">
+                    <div class="tags">
+                        
+                        <a class="tag" href="/tags/#audio" title="audio">audio</a>
+                        
+                    </div>
+                    <h1>频谱处理可视化教程</h1>
+                    
+                    
+                    <h2 class="subheading">WWDC 2018 Keynote 全记录</h2>
+                    
+                    <span class="meta">Posted by BY on July 19, 2018</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+
+    <!-- Post Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                post-container">
+
+				<h1 id="音频-输入特征的可视化">音频-输入特征的可视化</h1>
+<h2 id="波形与频谱图">波形与频谱图</h2>
+<h2 id="mfcc">MFCC</h2>
+<h2 id="三维频谱图">三维频谱图</h2>
+<h2 id="silence-移除">Silence 移除</h2>
+<h2 id="重采样-维度减少">重采样-维度减少</h2>
+<h2 id="特征抽取步骤">特征抽取步骤</h2>
+<p>所需要的模块</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import os
+from os.path import isdir,join
+from pathlib import Path
+import pandas as pd
+#Math
+import numpy as np
+from scipy.fftpack import fft
+from scipy import signal
+from scipy.io import wavfile
+import librosa
+from sklearn.decomposition import PCA
+
+#Visualization
+import matplotlib.pyplot as plt
+import seaborn as sns
+import IPython.display as ipd
+import librosa.display
+
+import plotly.offline as py
+py.init_notebook_mode(connected=True)
+import plotly.graph_objs as go
+import plotly.tools as tls
+import pandas as pd
+
+%matplotlib inline
+</code></pre></div></div>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Note:python2.7 import librosa
+#报错,TypeError: expected string or buffer
+#需要
+pip uninstall joblib
+pip install joblib==0.11
+</code></pre></div></div>
+<h1 id="可视化">可视化</h1>
+<p>关于人类听力有两种理论-<a href="https://en.wikipedia.org/wiki/Place_theory_(hearing)">基于频率</a>与<a href="https://en.wikipedia.org/wiki/Temporal_theory_(hearing)">时间理论</a>在语音识别中，有两种倾向-收入频谱(频率)以及更加复杂的特征- MFCC-(Mel-Frequency Cepstral Coefficients)。通常我们很少直接操作原始数据。</p>
+<h1 id="波形与频谱图-1">波形与频谱图</h1>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>trian_audio_path = ''
+filename = ''
+sample_rate,samples = wavfile.read(str(train_audio_path) + filename)
+</code></pre></div></div>
+<p>定义一个函数用来计算频谱
+说明，我们将采取频谱值的对数形式。我们需要确保输入没有0值。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>def  log specgram(audio,sample_rate,window_size=20,step_size=10,eps=1e-10):
+    nperseg = int(round(window_size * sample_rate / 1e3))
+    noverlap = int(round(step_size * sample_rate/ 1e3))
+    freqs,times,spec = signal.spectrogram(audio,fs=sample_rate,window = 'hann',nperseg = nperseg,noverlap = noverlap,detrend = False)
+    return freps,times,np.log(spec.T.astype(np.float32) + eps)
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>freqs,times,spectrogram samples,sample_rate = librosa.load(str(train_audio_path)+filename)= log_specgram(samples,sample_rate)
+fig = plt.figure(figsize = (14,8))
+axl = fig.add_subplot(211)
+axl.set_title('Raw wave of ' + filename)
+axl.set_ylabel('Amplitude')
+axl.plot(np.linspace(0,sample_rate/len(samples),sample_rate),samples)
+ax2 = fig.add_subplot(212)
+ax2.imshow(spectrogram.T,aspect = 'auto',origin = 'lower',extent=[times.min(),times.max(),freqs.min(),freqs.max()])
+ax2.set_yticks(freqs[::16])
+ax2.set_xticks(times[::16])
+ax2.set_title('Spectrogram of ' + filename)
+ax2.set_ylabel('Freqs in Hz')
+ax2.set_xlabel('Seconds')
+
+</code></pre></div></div>
+<p>上述针对自己的音频文件，可能会报错 x and y must have same dimension
+修改</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+sample_rate, samples = wavfile.read(str(train_audio_path)+filename)
+#samples,sample_rate = librosa.load(str(train_audio_path)+filename)
+if samples.shape !=16000:
+        samples = samples[:16000]
+</code></pre></div></div>
+<p><img src="http://pbe1y6vc7.bkt.clouddn.com/1.png" alt="显示" /></p>
+
+<p>如果我们将频谱作为输入特征去进行识别，我们一定要记得均一化特征。(我们需要在所有的数据集上均一化，下面是例子)</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mean = np.mean(spectrogram, axis=0)
+std = np.std(spectrogram, axis=0)
+spectrogram = (spectrogram - mean) / std
+
+</code></pre></div></div>
+<p>需要指出的是，对于每一帧，我们有160个特征，频率在0到8000。这意味着，一个特征对应着50HZ。然而，在1000-2000的频率倍程范围内，耳朵的频率分辨率为3.6HZ。这意味着，人类所听到的远远要比上述频谱要表达的所精确。
+##1.2 <a href="http://practicalcryptography.com/miscellaneous/machine-learning/guide-mel-frequency-cepstral-coefficients-mfccs/">MFCC</a>(梅尔频率倒谱系数)
+任何自动语音识别系统的第一步是提取特征，即识别音频信号的组成部分，这些组成部分有助于识别语言内容并丢弃所有其他携带诸如背景噪声，情绪等信息的东西。</p>
+
+<p>理解语音的要点是人类产生的声音被声道的形状过滤，包括舌头，牙齿等。这种形状决定了声音的来源。如果我们能够准确地确定形状，这应该能够准确地表示正在生产的音素。声道的形状表现在短时功率谱的包络中，MFCC的工作是准确地表示这个包络。本页面将提供有关MFCC的简短教程。</p>
+
+<p>Mel频率倒谱系数（MFCC）是一种广泛用于自动语音和说话人识别的功能。它们是戴维斯和梅尔斯坦在20世纪80年代引入的，从那以后一直是最先进的。在引入MFCC之前，线性预测系数（LPC）和线性预测倒谱系数（LPCC）（<a href="http://www.practicalcryptography.com/miscellaneous/machine-learning/tutorial-cepstrum-and-lpccs/">点击此处获取有关倒谱和LPCC的教程</a>）并且是自动语音识别（ASR）的主要特征类型，特别是对于HMM分类器。本页将介绍MFCC的主要方面，为什么它们为ASR提供了一个很好的功能，以及如何实现它们。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>可以用librosa python 包计算梅尔功率频谱和MFCC
+#From this tutorial
+S = librosa.feature.melspectrogram(samples,sr = sample_rate,n_mels=128)
+#Convert to log scale(dB).We'll use the peak power(max) as reference
+log_S = librosa.power_to_db(S, ref=np.max)
+
+plt.figure(figsize=(12, 4))
+librosa.display.specshow(log_S, sr=sample_rate, x_axis='time', y_axis='mel')
+plt.title('Mel power spectrogram ')
+plt.colorbar(format='%+02.0f dB')
+plt.tight_layout()
+</code></pre></div></div>
+<p>可能会报错：ParameterError: data must be floating-point
+这是因为wavfile.read()</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>samples,sample_rate = librosa.load(str(train_audio_path)+filename)
+S = librosa.feature.melspectrogram(samples,sr = sample_rate,n_mels=128)
+</code></pre></div></div>
+<p><img src="http://pbe1y6vc7.bkt.clouddn.com/3.png" alt="显示" /></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mfcc = librosa.feature.mfcc(S=log_S, n_mfcc=13)
+
+# Let's pad on the first and second deltas while we're at it
+delta2_mfcc = librosa.feature.delta(mfcc, order=2)
+
+plt.figure(figsize=(12, 4))
+librosa.display.specshow(delta2_mfcc)
+plt.ylabel('MFCC coeffs')
+plt.xlabel('Time')
+plt.title('MFCC')
+plt.colorbar()
+plt.tight_layout()
+</code></pre></div></div>
+<p><img src="http://pbe1y6vc7.bkt.clouddn.com/4.png" alt="显示" />
+在经典乃至最先进的系统中，MFCC或者类似特征均被采用为系统的输入而不是频谱。
+然而，在端到端系统中(基于神经网络的系统)大部分的输入特征可能是原始频谱或者是梅尔功率频谱。例如，MFCC去相关特征，但是NNS系统可以很好的处理相关特征。所以，如果你理解mel滤波器，你可能认为他们的用法合理。
+怎样选择由你决定！</p>
+<h2 id="三维频谱">三维频谱</h2>
+<h2 id="silence-removal">Silence removal</h2>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ipd.Audio(samples,rate = sample_rate)
+</code></pre></div></div>
+<p>我一直认为一些VAD(声音活动检测)在这里是真正有用的。虽然单词很简短，但是在这有很多的silence.一个合适的VAD可以很大程度上减少训练大小，加速训练速度。让我们掐头去尾，然后再听一遍。(基于上图绘制，截取4000到13000)
+截取后，我们依然能听到整个单词。我们不可能手动基于简单绘图裁剪所有的文件。但是你可以用webrtcvad包去做一个好的VAD。
+我们再次绘制，并进行字母对齐。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>freqs, times, spectrogram_cut = log_specgram(samples_cut, sample_rate)
+
+fig = plt.figure(figsize=(14, 8))
+ax1 = fig.add_subplot(211)
+ax1.set_title('Raw wave of ' + filename)
+ax1.set_ylabel('Amplitude')
+ax1.plot(samples_cut)
+
+</code></pre></div></div>
+
+
+
+                <hr style="visibility: hidden;">
+
+                <ul class="pager">
+                    
+                    
+                    <li class="next">
+                        <a href="/2018/08/10/PyTorch%E4%BB%8E%E5%A4%B4%E5%BC%80%E5%A7%8B%E5%AE%9E%E7%8E%B0YOLOv3%E6%A3%80%E6%B5%8B%E5%99%A8/" data-toggle="tooltip" data-placement="top" title="PyTorch实现YOLOV3">
+                        Next<br>
+                        <span>PyTorch实现YOLOV3</span>
+                        </a>
+                    </li>
+                    
+                </ul>
+
+
+                <!--Gitalk评论start  -->
+                
+                <!-- 引入Gitalk评论插件  -->
+                <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+                <script src="https://unpkg.com/gitalk@latest/dist/gitalk.min.js"></script>
+                <div id="gitalk-container"></div>
+                <!-- 引入一个生产md5的js，用于对id值进行处理，防止其过长 -->
+                <!-- Thank DF:https://github.com/NSDingFan/NSDingFan.github.io/issues/3#issuecomment-407496538 -->
+                <script src="/js/md5.min.js"></script>
+                <script type="text/javascript">
+                    var gitalk = new Gitalk({
+                    clientID: '6ff1a0fe3ca5d250981c',
+                    clientSecret: '3095f95a2ac5a609b4641e07ea0cd98547a6897f',
+                    repo: 'mengzhangjian.github.io',
+                    owner: 'mengzhangjian',
+                    admin: ['mengzhangjian'],
+                    distractionFreeMode: true,
+                    id: md5(location.pathname),
+                    });
+                    gitalk.render('gitalk-container');
+                </script>
+                
+                <!-- Gitalk end -->
+
+                
+
+            </div>  
+
+    <!-- Side Catalog Container -->
+        
+            <div class="
+                col-lg-2 col-lg-offset-0
+                visible-lg-block
+                sidebar-container
+                catalog-container">
+                <div class="side-catalog">
+                    <hr class="hidden-sm hidden-xs">
+                    <h5>
+                        <a class="catalog-toggle" href="#">CATALOG</a>
+                    </h5>
+                    <ul class="catalog-body"></ul>
+                </div>
+            </div>
+        
+
+    <!-- Sidebar Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <hr class="hidden-sm hidden-xs">
+                    <h5><a href="/tags/">FEATURED TAGS</a></h5>
+                    <div class="tags">
+        				
+                            
+        				
+                            
+        				
+                            
+                				<a href="/tags/#DeepLearning" title="DeepLearning" rel="2">
+                                    DeepLearning
+                                </a>
+                            
+        				
+                            
+                				<a href="/tags/#CUDA" title="CUDA" rel="9">
+                                    CUDA
+                                </a>
+                            
+        				
+                            
+        				
+        			</div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+                <hr>
+                <h5>FRIENDS</h5>
+                <ul class="list-inline">
+                    
+                        <li><a href="http://zhengwuyang.com">WY</a></li>
+                    
+                        <li><a href="http://www.jianshu.com/u/e71990ada2fd">简书·BY</a></li>
+                    
+                        <li><a href="https://apple.com">Apple</a></li>
+                    
+                        <li><a href="https://developer.apple.com/">Apple Developer</a></li>
+                    
+                </ul>
+                
+            </div>
+        </div>
+    </div>
+</article>
+
+
+
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+<!-- anchor-js, Doc:http://bryanbraun.github.io/anchorjs/ -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js",function(){
+        // BY Fix:去除标题前的‘#’ issues:<https://github.com/qiubaiying/qiubaiying.github.io/issues/137>
+        // anchors.options = {
+        //   visible: 'always',
+        //   placement: 'right',
+        //   icon: '#'
+        // };
+        anchors.add().remove('.intro-header h1').remove('.subheading').remove('.sidebar-container h5');
+    })
+</script>
+<style>
+    /* place left on bigger screen */
+    @media all and (min-width: 800px) {
+        .anchorjs-link{
+            position: absolute;
+            left: -0.75em;
+            font-size: 1.1em;
+            margin-top : -0.1em;
+        }
+    }
+</style>
+
+
+    <!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <ul class="list-inline text-center">
+                    
+                    <!-- add jianshu add target = "_blank" to <a> by BY -->
+                    
+                            <li>
+                                <a target="_blank" href="https://www.jianshu.com/u/33abd4ccb0fc">
+                                    <span class="fa-stack fa-lg">
+                                        <i class="fa fa-circle fa-stack-2x"></i>
+                                        <i class="fa  fa-stack-1x fa-inverse">简</i>
+                                    </span>
+                                </a>
+                            </li>
+                    
+                    
+
+                    <!-- add Weibo, Zhihu by Hux, add target = "_blank" to <a> by Hux -->
+                    
+                    <li>
+                        <a target="_blank" href="https://www.zhihu.com/people/alphaxone">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa  fa-stack-1x fa-inverse">知</i>
+                            </span>
+                        </a>
+                    </li>
+                    
+                    
+
+
+                    
+                    <li>
+                        <a target="_blank" href="https://www.facebook.com/100006075480199">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-facebook fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                    
+                    
+                    <li>
+                        <a target="_blank" href="https://github.com/mengzhangjian">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                    
+                    
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; Alpha 2023
+                    <br>
+                    Theme on <a href="https://github.com/mengzhangjian/mengzhangjian.github.io.git">GitHub</a> |
+                    <iframe
+                        style="margin-left: 2px; margin-bottom:-5px;"
+                        frameborder="0" scrolling="0" width="100px" height="20px"
+                        src="https://ghbtns.com/github-btn.html?user=mengzhangjian&repo=mengzhangjian.github.io&type=star&count=true" >
+                    </iframe>
+                </p>
+                <p class="copyright text-muted">
+                    <a href="https://beian.miit.gov.cn/" target="_blank">京ICP备2022032745号</a>
+                    <a href="https://www.beian.gov.cn/portal/registerSystemInfo/" target="_blank">京公网安备11011402013706号</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src="/js/jquery.min.js "></script>
+
+<!-- Bootstrap Core JavaScript -->
+<script src="/js/bootstrap.min.js "></script>
+
+<!-- Custom Theme JavaScript -->
+<script src="/js/hux-blog.min.js "></script>
+
+<!-- Service Worker -->
+
+<script type="text/javascript">
+    if(navigator.serviceWorker){
+        // For security reasons, a service worker can only control the pages that are in the same directory level or below it. That's why we put sw.js at ROOT level.
+        navigator.serviceWorker
+            .register('/sw.js')
+            .then((registration) => {console.log('Service Worker Registered. ', registration)})
+            .catch((error) => {console.log('ServiceWorker registration failed: ', error)})
+    }
+</script>
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+<!-- 
+     Because of the native support for backtick-style fenced code blocks 
+     right within the Markdown is landed in Github Pages, 
+     From V1.6, There is no need for Highlight.js, 
+     so Huxblog drops it officially.
+
+     - https://github.com/blog/2100-github-pages-now-faster-and-simpler-with-jekyll-3-0  
+     - https://help.github.com/articles/creating-and-highlighting-code-blocks/ 
+     - https://github.com/jneen/rouge/wiki/list-of-supported-languages-and-lexers   
+-->
+<!--
+    <script>
+        async("http://cdn.bootcss.com/highlight.js/8.6/highlight.min.js", function(){
+            hljs.initHighlightingOnLoad();
+        })
+    </script>
+    <link href="http://cdn.bootcss.com/highlight.js/8.6/styles/github.min.css" rel="stylesheet">
+-->
+
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if($('#tag_cloud').length !== 0){
+        async('/js/jquery.tagcloud.js',function(){
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: {start: '#bbbbee', end: '#0085a1'},
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js", function(){
+        var $nav = document.querySelector("nav");
+        if($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+<!-- Google Analytics -->
+
+<script>
+    // dynamic User by Hux
+    var _gaId = 'UA-121837119-1';
+    var _gaDomain = 'alphaxone.com';
+
+    // Originial
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', _gaId, _gaDomain);
+    ga('send', 'pageview');
+</script>
+
+
+
+<!-- Baidu Tongji -->
+
+
+
+
+<!-- Side Catalog -->
+
+<script type="text/javascript">
+    function generateCatalog (selector) {
+        var P = $('div.post-container'),a,n,t,l,i,c;
+        a = P.find('h1,h2,h3,h4,h5,h6');
+        a.each(function () {
+            n = $(this).prop('tagName').toLowerCase();
+            i = "#"+$(this).prop('id');
+            t = $(this).text();
+            c = $('<a href="'+i+'" rel="nofollow">'+t+'</a>');
+            l = $('<li class="'+n+'_nav"></li>').append(c);
+            $(selector).append(l);
+        });
+        return true;    
+    }
+
+    generateCatalog(".catalog-body");
+
+    // toggle side catalog
+    $(".catalog-toggle").click((function(e){
+        e.preventDefault();
+        $('.side-catalog').toggleClass("fold")
+    }))
+
+    /*
+     * Doc: https://github.com/davist11/jQuery-One-Page-Nav
+     * Fork by Hux to support padding
+     */
+    async("/js/jquery.nav.js", function () {
+        $('.catalog-body').onePageNav({
+            currentClass: "active",
+            changeHash: !1,
+            easing: "swing",
+            filter: "",
+            scrollSpeed: 700,
+            scrollOffset: 0,
+            scrollThreshold: .2,
+            begin: null,
+            end: null,
+            scrollChange: null,
+            padding: 80
+        });
+    });
+</script>
+
+
+
+
+
+<!-- Image to hack wechat -->
+<img src="/img/apple-touch-icon.png" width="0" height="0" />
+<!-- Migrate from head to bottom, no longer block render and still work -->
+
+</body>
+
+</html>

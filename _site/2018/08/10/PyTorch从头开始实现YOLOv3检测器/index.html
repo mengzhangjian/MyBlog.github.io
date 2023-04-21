@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KB55E0GLN2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KB55E0GLN2');
+</script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5557494619723966"
+     crossorigin="anonymous"></script>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Every failure is leading towards success.">
+    <meta name="keywords"  content="BY, BY Blog, 张建的博客, 张建, 计算机视觉, 机器人,Computer Vision">
+    <meta name="theme-color" content="#000000">
+    
+    <title>PyTorch实现YOLOV3 - 张建的博客 | BY Blog</title>
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/pwa/manifest.json">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <!-- Safari Webpage Icon    by-BY -->
+    <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="http://0.0.0.0:4000/2018/08/10/PyTorch%E4%BB%8E%E5%A4%B4%E5%BC%80%E5%A7%8B%E5%AE%9E%E7%8E%B0YOLOv3%E6%A3%80%E6%B5%8B%E5%99%A8/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/hux-blog.min.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/css/syntax.css">
+
+    <!-- Custom Fonts -->
+    <!-- <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" type="text/css"> -->
+    <!-- Hux change font-awesome CDN to qiniu -->
+    <link href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5557494619723966"
+     crossorigin="anonymous"></script>
+
+    <!-- Hux Delete, sad but pending in China
+    <link href='http://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/
+    css'>
+    -->
+
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <!-- ga & ba script hoook -->
+    <script></script>
+</head>
+
+
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="">
+
+    <!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Alpha</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/">Home</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/about/">About</a>
+                    </li>
+                    
+                    <li>
+                        <a href="/tags/">Tags</a>
+                    </li>
+                    
+                </ul>
+            </div>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    var __HuxNav__ = {
+        close: function(){
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        },
+        open: function(){
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+
+    // Bind Event
+    $toggle.addEventListener('click', function(e){
+        if ($navbar.className.indexOf('in') > 0) {
+            __HuxNav__.close()
+        }else{
+            __HuxNav__.open()
+        }
+    })
+
+    /**
+     * Since Fastclick is used to delegate 'touchstart' globally
+     * to hack 300ms delay in iOS by performing a fake 'click',
+     * Using 'e.stopPropagation' to stop 'touchstart' event from 
+     * $toggle/$collapse will break global delegation.
+     * 
+     * Instead, we use a 'e.target' filter to prevent handler
+     * added to document close HuxNav.  
+     *
+     * Also, we use 'click' instead of 'touchstart' as compromise
+     */
+    document.addEventListener('click', function(e){
+        if(e.target == $toggle) return;
+        if(e.target.className == 'icon-bar') return;
+        __HuxNav__.close();
+    })
+</script>
+
+
+    <!-- Image to hack wechat -->
+<!-- <img src="/img/icon_wechat.png" width="0" height="0"> -->
+<!-- <img src="/img/post-bg-re-vs-ng2.jpg" width="0" height="0"> -->
+
+<!-- Post Header -->
+<style type="text/css">
+    header.intro-header{
+        position: relative;
+        background-image: url('/img/post-bg-re-vs-ng2.jpg')
+    }
+
+    
+</style>
+<header class="intro-header" >
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KB55E0GLN2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KB55E0GLN2');
+</script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5557494619723966"
+     crossorigin="anonymous"></script>
+    <div class="header-mask"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <div class="post-heading">
+                    <div class="tags">
+                        
+                        <a class="tag" href="/tags/#Blog" title="Blog">Blog</a>
+                        
+                    </div>
+                    <h1>PyTorch实现YOLOV3</h1>
+                    
+                    
+                    <h2 class="subheading">YOLOV3的实现教程</h2>
+                    
+                    <span class="meta">Posted by BY on August 10, 2018</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+
+    <!-- Post Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                post-container">
+
+				<blockquote>
+  <p>感谢</p>
+</blockquote>
+
+<p>学习对象检测的最佳方式是从头开始实现算法。
+我们将使用PyTorch从头开始实现YOLO(v3)对象检测器，YOLOv3是一种更快的对象检测算法。</p>
+
+<hr />
+
+<h1 id="本教程分为5个部分">本教程分为5个部分：</h1>
+<p>第1部分（本章）：了解YOLO的工作原理
+第2部分：创建网络体系结构的层
+第3部分：实现网络的正向传递
+第4部分：对象分数阈值和非最大抑制
+第5部分：设计输入和输出管道</p>
+<h1 id="先决条件">先决条件</h1>
+<p>1.您应该了解卷积神经网络的工作原理。这还包括残差块，跳过连接和上采样的知识。
+2.什么是对象检测，边界框回归，IoU和非最大抑制。
+3.基本的PyTorch用法。您应该能够轻松创建简单的神经网络</p>
+<h1 id="什么是yolo">什么是YOLO？</h1>
+<p>YOLO代表你只看一次。它是一个物体探测器，它使用深度卷积神经网络学习的特征来探测物体。在我们弄清楚代码之前，我们必须了解YOLO的工作原理。</p>
+<h1 id="完全卷积神经网络">完全卷积神经网络</h1>
+<p>YOLO仅使用卷积层，使其成为完全卷积网络（FCN）。它有75个卷积层，具有跳过连接和上采样层。不使用任何形式的池化层，并且使用具有步幅2的卷积层来对特征图进行下采样，这样可以有助于因为池化层所造成的低层语义特征的丢失。</p>
+
+<p>作为FCN，YOLO对输入大小的大小保持不变。然而，在实践中，当我们实现算法时由于在前端可能会遇到的各种问题，我们通常希望输入大小保持不变。</p>
+
+<p>这些问题中的最重要一点是，如果我们想要批处理我们的图像(GPU可以并行处理批量图像，从而提高速度)，我们就需要具有固定宽与高的图像。这需要连接多副图像为一个大的块，对应于将多个PyTorch张量连接成一个。
+网络中对图像的下采样是通过网络步幅因子实现的。例如:如果网络的步幅为32,那么输入为416×416的图像将会产生大小为13×13的输出。</p>
+<h1 id="解释输出">解释输出</h1>
+<p>通常，(对于所有的目标检测器而言)，由卷积学习到的特征被传递到分类器/回归器上，该分类器/回归器进行检测预测(边界框的坐标，类别的标签)。
+在YOLO中，通常使用1×1的卷积层来完成预测。
+现在，首先需要注意的是我们的输出是一个特征图。由于我们使用了1×1卷积层，因为预测图的大小正好等于之前特征图的大小。在YOLOV3(及其后代)中，您解释此预测图的方式是每个单元格可以预测固定数量的边界框。
+在特征图中，我们有(B*(5+C))个元素。B代表了每个元可以预测的框的数量。由论文可知，这些B框的每一个都可以专门检测一个确切的类别种类。每一个框有5+C个属性，描述了每一个框的中心坐标，维度，坐标分数和C类别置信度。YOLOV3为每一个元格预测3个边界框。</p>
+
+<p>如果目标的中心落在该单元格的感知区域中，您希望特征图的每一个单元格可以通过其中一个边界框预测目标。
+这与YOLO的训练方式有关，其中只有一个边界框负责检测任何给定的对象。首先，我们必须确定这个边界框属于哪个单元格。</p>
+
+<p>为此，我们将输入图像划分为网格维度等同于最终特征图大小的网格。
+<img src="http://pbe1y6vc7.bkt.clouddn.com/yolo-v3-1.jpg" alt="显示" />
+然后，包含了目标真实坐标框中心的输入图像上的单元格被选定用于预测目标。在图像中，此单元格被标记为红色，包含了真实坐标框的中心坐标。(被标记为黄色)
+现在，红色的单元格位于图中网络单元的第7列和第7行。我们现在将特征图山的第7行，第7列的单元格作为检测狗的单元格。
+现在，这个单元格可以预测三个边界框。哪一个被安排为狗的真实标签呢？为了便于理解，我们需要理解锚点的概念。</p>
+<h1 id="说明">说明</h1>
+<p>这里我们所说的单元格指的是在预测特征图上的单元格。我们将输入图像分割成网格去决定预测特征图上的哪一个单元格来负责检测。</p>
+<h1 id="锚点">锚点</h1>
+<p>预测边界框的宽度和高度可能是有意义的，但是在实践中，这导致了训练时梯度的不稳定性。相反，大部分的现代检测器预测log空间变换，或者叫做锚点的预定义的默认边框的偏移。</p>
+
+<p>然后，这些变换被应用到锚点框获得预测结果。YOLOV3有三种锚点框，对每一个单元格产生了三个边界框的预测结果。
+回到我们之前的问题，负责检测狗的边界框是与真实边界框有着最高IOU的锚点。</p>
+<h1 id="预测">预测</h1>
+<p>下边的公式描述了网络输出是怎么转化从而获得边框预测值的。
+<img src="http://pbe1y6vc7.bkt.clouddn.com/yolo-2.jpg" alt="display" />
+bx,by,bw,bh是预测的x,y的中心联合坐标，宽与高。tx,ty,tw,th是网络的输出。cx,cy是网格的左上角坐标。pw,ph是该框的锚点维度。</p>
+<h1 id="中心坐标">中心坐标</h1>
+<p>注意到我们通过sigmod函数运行我们的中心坐标预测。这强制了输出值位于0到1之间。为什么会是这样呢？
+一般情况下，YOLO并没有预测边界框中心的绝对坐标值。它预测了偏移量：
+1.对用来预测目标的单元格左上角坐标的相对值
+2.由特征图单元格维度进行标准化
+例如，考虑我们狗的图像，如果预测的中心坐标为(0.4,0.7)，这意味着在13×13特征图上中心坐标在(6.4,6.7)。(因为红色单元格的左上角坐标为(6,6))。
+但是，如果预测到的x,y坐标值大于1呢？假设是(1.2,0.7)。这意味着中心坐标是(7.2,6.7)。注意位于单元格的中心现在位于红色单元格的右边，在第7行的第8个单元格。这违反了YOLO的理论。因为如果我们假设红色框负责预测狗的话，狗的中心坐标必须位于红色单元格内，而不是位于旁边。
+<em>因此，为了解决这个问题，输出必须经过sigmod函数，这将输出强制压缩在0到1之间，有效的将预测中心保持在单元格中。</em></p>
+<h1 id="边界框的维度">边界框的维度</h1>
+<p>通过对输出应用对数空间变换然后乘以锚点得到预测的边界框的维度。
+<img src="http://pbe1y6vc7.bkt.clouddn.com/yolo-3.jpg" alt="display" />
+检测器输出是如何转化给出最终预测结果。<a href="http://christopher5106.github.io/">图像来源</a>
+由此产生的预测，bw与bh,由图像的高与宽进行标准化。(以这种方式选择训练标签)。所以，如果预测的包含狗的边界框的bx与by是(0.3,0.8)，然后实际的13×13特征图上的宽与高是(13×0.3,13×0.8)。</p>
+<h1 id="目标分数">目标分数</h1>
+<p>目标分数代表了目标落在检测框里的概率。对于红色和相邻的网格，它应该接近于1,而对于其它角落处的网格来说，应该接近于0.
+目标分数也是通过sigmoid函数，被解释为概率。</p>
+<h1 id="类别置信度">类别置信度</h1>
+<p>类别置信度代表了检测到的目标属于一个特定类的概率。在V3之前，YOLO用softmax类别分数。
+然而，这个设计在V3中被抛弃了，相反作者选择了sigmod。Softmax类别分数假设类别是互斥的。换句话说，如果一个目标属于一个类，那么它就不属于其他类。这对于将用作我们的基检测器的COCO数据集来说是正确的。
+然而，当我们的类别里有女人或者人，这个假设可能不成立。这就是作者坚持用Softmax的原因。</p>
+<h1 id="不同尺度之间的预测">不同尺度之间的预测</h1>
+<p>YOLO V3在3个不同尺度之间进行预测。检测层用来在三个不同大小的特征图之间进行预测，各自的步幅为32,16,8.这意味着，对于大小为416×416的图像来说，我们在大小为13×13,26×26,52×52的特征图上进行检测。
+直到第一检测层，网络对图像进行下采样，在步幅为32的特征图上进行检测。进一步，用上采样因子2对该层上采样然后与之前有同样大小的特征图进行联接。此时，另一个检测在步幅为16的特征图上进行。重复相同的上采样步骤，最后的检测在步幅为8的特征图上进行。
+在每一个尺度，每个单元格用3个锚点预测3个边界框，使得总的锚点为9.(锚点在不同尺度下是不同的)
+<img src="http://pbe1y6vc7.bkt.clouddn.com/yolo-scale_1.jpg" alt="display" />
+<img src="http://pbe1y6vc7.bkt.clouddn.com/yolo-scale_2.jpg" alt="display" />
+作者报告这帮助YOLO V3在检测小目标时表现更好，解决了早期YOLO版本所面临的问题。上采样可以帮助网络学习细粒度的特征，这些特征有助于检测小物体。</p>
+<h1 id="输出处理">输出处理</h1>
+<p>对于大小为416×416的图像，YOLO预测((52×52)+(26×26)+(13×13))×3 = 10647个边界框。然而，在我们的图像例子中，仅有一个目标，狗。我们怎样将检测个数从10647减到1呢？</p>
+<h1 id="通过目标置信度的阈值处理">通过目标置信度的阈值处理</h1>
+<p>首先，我们基于目标检测分数进行边界框的过滤。一般来将，边界框的分数低于某个阈值的直接过滤掉。</p>
+<h1 id="非最大值抑制">非最大值抑制</h1>
+<p>NMS旨在解决同一图像的多个检测问题。例如，红色网格的三个边界框可能检测到一个框或者其相邻的单元格也会检测到相同的目标。
+<img src="http://pbe1y6vc7.bkt.clouddn.com/yolo-nms.jpg" alt="display" /></p>
+<h1 id="我们的实现">我们的实现</h1>
+<p>YOLO只能检测用来训练网络的训练集里出现过的类别。我们将用官方权重文件作为我们的检测器。这些权重通过训练coco数据集获得，因此，我们可以检测80个类别。</p>
+
+<p>这是第一部分，这部分解释了关于YOLO算法部分。然而，如果你想深入了解YOLO是怎样工作与训练的，以及与其它检测器对比时的表现，你可以去读原始论文。</p>
+
+<p>下一部分，我们将实现组成检测器的各种层。</p>
+
+
+
+                <hr style="visibility: hidden;">
+
+                <ul class="pager">
+                    
+                    <li class="previous">
+                        <a href="/2018/07/19/Pydub%E9%9F%B3%E9%A2%91%E7%89%B9%E5%BE%81%E6%8F%90%E5%8F%96/" data-toggle="tooltip" data-placement="top" title="频谱处理可视化教程">
+                        Previous<br>
+                        <span>频谱处理可视化教程</span>
+                        </a>
+                    </li>
+                    
+                    
+                    <li class="next">
+                        <a href="/2019/06/16/LSTM%E7%B3%BB%E7%BB%9F%E5%9B%9E%E9%A1%BE/" data-toggle="tooltip" data-placement="top" title="LSTM知识系统回顾">
+                        Next<br>
+                        <span>LSTM知识系统回顾</span>
+                        </a>
+                    </li>
+                    
+                </ul>
+
+
+                <!--Gitalk评论start  -->
+                
+                <!-- 引入Gitalk评论插件  -->
+                <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+                <script src="https://unpkg.com/gitalk@latest/dist/gitalk.min.js"></script>
+                <div id="gitalk-container"></div>
+                <!-- 引入一个生产md5的js，用于对id值进行处理，防止其过长 -->
+                <!-- Thank DF:https://github.com/NSDingFan/NSDingFan.github.io/issues/3#issuecomment-407496538 -->
+                <script src="/js/md5.min.js"></script>
+                <script type="text/javascript">
+                    var gitalk = new Gitalk({
+                    clientID: '6ff1a0fe3ca5d250981c',
+                    clientSecret: '3095f95a2ac5a609b4641e07ea0cd98547a6897f',
+                    repo: 'mengzhangjian.github.io',
+                    owner: 'mengzhangjian',
+                    admin: ['mengzhangjian'],
+                    distractionFreeMode: true,
+                    id: md5(location.pathname),
+                    });
+                    gitalk.render('gitalk-container');
+                </script>
+                
+                <!-- Gitalk end -->
+
+                
+
+            </div>  
+
+    <!-- Side Catalog Container -->
+        
+            <div class="
+                col-lg-2 col-lg-offset-0
+                visible-lg-block
+                sidebar-container
+                catalog-container">
+                <div class="side-catalog">
+                    <hr class="hidden-sm hidden-xs">
+                    <h5>
+                        <a class="catalog-toggle" href="#">CATALOG</a>
+                    </h5>
+                    <ul class="catalog-body"></ul>
+                </div>
+            </div>
+        
+
+    <!-- Sidebar Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <hr class="hidden-sm hidden-xs">
+                    <h5><a href="/tags/">FEATURED TAGS</a></h5>
+                    <div class="tags">
+        				
+                            
+        				
+                            
+        				
+                            
+                				<a href="/tags/#DeepLearning" title="DeepLearning" rel="2">
+                                    DeepLearning
+                                </a>
+                            
+        				
+                            
+                				<a href="/tags/#CUDA" title="CUDA" rel="9">
+                                    CUDA
+                                </a>
+                            
+        				
+                            
+        				
+        			</div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+                <hr>
+                <h5>FRIENDS</h5>
+                <ul class="list-inline">
+                    
+                        <li><a href="http://zhengwuyang.com">WY</a></li>
+                    
+                        <li><a href="http://www.jianshu.com/u/e71990ada2fd">简书·BY</a></li>
+                    
+                        <li><a href="https://apple.com">Apple</a></li>
+                    
+                        <li><a href="https://developer.apple.com/">Apple Developer</a></li>
+                    
+                </ul>
+                
+            </div>
+        </div>
+    </div>
+</article>
+
+
+
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+<!-- anchor-js, Doc:http://bryanbraun.github.io/anchorjs/ -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js",function(){
+        // BY Fix:去除标题前的‘#’ issues:<https://github.com/qiubaiying/qiubaiying.github.io/issues/137>
+        // anchors.options = {
+        //   visible: 'always',
+        //   placement: 'right',
+        //   icon: '#'
+        // };
+        anchors.add().remove('.intro-header h1').remove('.subheading').remove('.sidebar-container h5');
+    })
+</script>
+<style>
+    /* place left on bigger screen */
+    @media all and (min-width: 800px) {
+        .anchorjs-link{
+            position: absolute;
+            left: -0.75em;
+            font-size: 1.1em;
+            margin-top : -0.1em;
+        }
+    }
+</style>
+
+
+    <!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <ul class="list-inline text-center">
+                    
+                    <!-- add jianshu add target = "_blank" to <a> by BY -->
+                    
+                            <li>
+                                <a target="_blank" href="https://www.jianshu.com/u/33abd4ccb0fc">
+                                    <span class="fa-stack fa-lg">
+                                        <i class="fa fa-circle fa-stack-2x"></i>
+                                        <i class="fa  fa-stack-1x fa-inverse">简</i>
+                                    </span>
+                                </a>
+                            </li>
+                    
+                    
+
+                    <!-- add Weibo, Zhihu by Hux, add target = "_blank" to <a> by Hux -->
+                    
+                    <li>
+                        <a target="_blank" href="https://www.zhihu.com/people/alphaxone">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa  fa-stack-1x fa-inverse">知</i>
+                            </span>
+                        </a>
+                    </li>
+                    
+                    
+
+
+                    
+                    <li>
+                        <a target="_blank" href="https://www.facebook.com/100006075480199">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-facebook fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                    
+                    
+                    <li>
+                        <a target="_blank" href="https://github.com/mengzhangjian">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                    
+                    
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; Alpha 2023
+                    <br>
+                    Theme on <a href="https://github.com/mengzhangjian/mengzhangjian.github.io.git">GitHub</a> |
+                    <iframe
+                        style="margin-left: 2px; margin-bottom:-5px;"
+                        frameborder="0" scrolling="0" width="100px" height="20px"
+                        src="https://ghbtns.com/github-btn.html?user=mengzhangjian&repo=mengzhangjian.github.io&type=star&count=true" >
+                    </iframe>
+                </p>
+                <p class="copyright text-muted">
+                    <a href="https://beian.miit.gov.cn/" target="_blank">京ICP备2022032745号</a>
+                    <a href="https://www.beian.gov.cn/portal/registerSystemInfo/" target="_blank">京公网安备11011402013706号</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src="/js/jquery.min.js "></script>
+
+<!-- Bootstrap Core JavaScript -->
+<script src="/js/bootstrap.min.js "></script>
+
+<!-- Custom Theme JavaScript -->
+<script src="/js/hux-blog.min.js "></script>
+
+<!-- Service Worker -->
+
+<script type="text/javascript">
+    if(navigator.serviceWorker){
+        // For security reasons, a service worker can only control the pages that are in the same directory level or below it. That's why we put sw.js at ROOT level.
+        navigator.serviceWorker
+            .register('/sw.js')
+            .then((registration) => {console.log('Service Worker Registered. ', registration)})
+            .catch((error) => {console.log('ServiceWorker registration failed: ', error)})
+    }
+</script>
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+<!-- 
+     Because of the native support for backtick-style fenced code blocks 
+     right within the Markdown is landed in Github Pages, 
+     From V1.6, There is no need for Highlight.js, 
+     so Huxblog drops it officially.
+
+     - https://github.com/blog/2100-github-pages-now-faster-and-simpler-with-jekyll-3-0  
+     - https://help.github.com/articles/creating-and-highlighting-code-blocks/ 
+     - https://github.com/jneen/rouge/wiki/list-of-supported-languages-and-lexers   
+-->
+<!--
+    <script>
+        async("http://cdn.bootcss.com/highlight.js/8.6/highlight.min.js", function(){
+            hljs.initHighlightingOnLoad();
+        })
+    </script>
+    <link href="http://cdn.bootcss.com/highlight.js/8.6/styles/github.min.css" rel="stylesheet">
+-->
+
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if($('#tag_cloud').length !== 0){
+        async('/js/jquery.tagcloud.js',function(){
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: {start: '#bbbbee', end: '#0085a1'},
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js", function(){
+        var $nav = document.querySelector("nav");
+        if($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+<!-- Google Analytics -->
+
+<script>
+    // dynamic User by Hux
+    var _gaId = 'UA-121837119-1';
+    var _gaDomain = 'alphaxone.com';
+
+    // Originial
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', _gaId, _gaDomain);
+    ga('send', 'pageview');
+</script>
+
+
+
+<!-- Baidu Tongji -->
+
+
+
+
+<!-- Side Catalog -->
+
+<script type="text/javascript">
+    function generateCatalog (selector) {
+        var P = $('div.post-container'),a,n,t,l,i,c;
+        a = P.find('h1,h2,h3,h4,h5,h6');
+        a.each(function () {
+            n = $(this).prop('tagName').toLowerCase();
+            i = "#"+$(this).prop('id');
+            t = $(this).text();
+            c = $('<a href="'+i+'" rel="nofollow">'+t+'</a>');
+            l = $('<li class="'+n+'_nav"></li>').append(c);
+            $(selector).append(l);
+        });
+        return true;    
+    }
+
+    generateCatalog(".catalog-body");
+
+    // toggle side catalog
+    $(".catalog-toggle").click((function(e){
+        e.preventDefault();
+        $('.side-catalog').toggleClass("fold")
+    }))
+
+    /*
+     * Doc: https://github.com/davist11/jQuery-One-Page-Nav
+     * Fork by Hux to support padding
+     */
+    async("/js/jquery.nav.js", function () {
+        $('.catalog-body').onePageNav({
+            currentClass: "active",
+            changeHash: !1,
+            easing: "swing",
+            filter: "",
+            scrollSpeed: 700,
+            scrollOffset: 0,
+            scrollThreshold: .2,
+            begin: null,
+            end: null,
+            scrollChange: null,
+            padding: 80
+        });
+    });
+</script>
+
+
+
+
+
+<!-- Image to hack wechat -->
+<img src="/img/apple-touch-icon.png" width="0" height="0" />
+<!-- Migrate from head to bottom, no longer block render and still work -->
+
+</body>
+
+</html>
