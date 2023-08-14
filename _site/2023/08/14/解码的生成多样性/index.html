@@ -256,7 +256,7 @@
 
 <h3 id="greedy-search贪心搜索">Greedy Search(贪心搜索)</h3>
 
-<p>贪心搜索在每个时间步<script type="math/tex">t</script>都简单的选择概率最高的词作为当前输出词: <script type="math/tex">$$w_t = argmax_{w} P(w_{t}w_{1:t-1})$$</script>，如下图所示</p>
+<p>贪心搜索在每个时间步<script type="math/tex">t</script>都简单的选择概率最高的词作为当前输出词: <script type="math/tex">w_t = argmax_{w} P(w_{t}w_{1:t-1})</script>，如下图所示</p>
 
 <p><img src="https://res.cloudinary.com/dsn0i1fsm/image/upload/v1692014779/blog/decoder/Untitled_tyombp.png" alt="Untitled" /></p>
 
@@ -407,7 +407,7 @@
 
 <p><img src="https://res.cloudinary.com/dsn0i1fsm/image/upload/v1692014779/blog/decoder/Untitled_3_ylutyz.png" alt="Untitled" /></p>
 
-<p>很明显，使用采样方法时文本生成本身不再是确定性的。单词<script type="math/tex">$$\text{car}$$</script>从条件概率分布<script type="math/tex"></script>$$P(w\text{The})</script>中采样而得，而<script type="math/tex">$$\text{drivers}$$</script>则采样自<script type="math/tex">$$P(w\text{The}\space\text{car})$$。</script></p>
+<p>很明显，使用采样方法时文本生成本身不再是确定性的。单词<script type="math/tex">\text{car}</script>从条件概率分布<script type="math/tex"></script>P(w\text{The})</script>中采样而得，而<script type="math/tex">\text{drivers}</script>则采样自<script type="math/tex">P(w\text{The}\space\text{car})。</script></p>
 
 <p>在transformers中，我们设置do_sample=True并通过设置top_k=0停用Top-K采样(稍后详细介绍)。在下文中，为便于复现，我们会固定random_seed=0，但你可以在自己的模型中随意更改random_seed。</p>
 
@@ -437,7 +437,7 @@ But it seems that the dogs have learned a lot from teasing at the local batte ha
 
 <p>生成的文本看起来不错～但仔细观察会发现它不是很连贯。3-grams new hand scene和local batte harness 非常奇怪，看起来不像是人写的。这就是对单词序列进行采样时的大问题：模型通常会产生不连贯的乱码，参见<a href="https://arxiv.org/abs/1904.09751">Ari Holtzman(2019)</a>的论文。</p>
 
-<p>缓解这一问题的一个技巧是通过降低所谓的softmax的温度使分布<script type="math/tex"> $$P(w|w_{1:t-1})$$ </script>更陡峭。而降低“温度”，本质上是增加高概率单词的似然并降低低概率单词的似然。</p>
+<p>缓解这一问题的一个技巧是通过降低所谓的softmax的温度使分布<script type="math/tex"> P(w|w_{1:t-1}) </script>更陡峭。而降低“温度”，本质上是增加高概率单词的似然并降低低概率单词的似然。</p>
 
 
 <p>将温度应用到于我们的例子中后，结果如下图所示:</p>
@@ -503,7 +503,7 @@ I am from
 </span></code></pre></div></div>
 
 
-相当不错。该文本可以说是迄今为止生成的最“像人”的文本。现在还有一个问题，Top-K采样不会动态调整从需要概率分布<script type="math/tex">$$P(w|w_{1:t-1})$$</script>中选出的单词。这可能会有问题，因为某些分布可能是非常尖锐（上图中右侧的分布），而另一些可能更平坦（上图中左侧的分布），所以对不同的分布使用同一个绝对数<script type="math/tex">K</script>可能并不普适。
+相当不错。该文本可以说是迄今为止生成的最“像人”的文本。现在还有一个问题，Top-K采样不会动态调整从需要概率分布<script type="math/tex">P(w|w_{1:t-1})</script>中选出的单词。这可能会有问题，因为某些分布可能是非常尖锐（上图中右侧的分布），而另一些可能更平坦（上图中左侧的分布），所以对不同的分布使用同一个绝对数<script type="math/tex">K</script>可能并不普适。
 
 
 <p>在<script type="math/tex">t=1</script>时，Top-K将<script type="math/tex">\text{people}，\text{big}，\text{house}，\text{cat}</script>排出了采样池，而这些词似乎是合理的候选词。另一方面，在<script type="math/tex">t=2</script>时，该方法却又把不太合适的<script type="math/tex">\text{down}，\text{a}</script>纳入了采样池。因此，将采样池限制为固定大小K可能会在分布比较尖锐的时候产生胡言乱语，而在分布比较平坦的时候限制模型的创造力。这一发现促使<a href="https://arxiv.org/abs/1904.09751">Ari Holtzman（2019）</a>发明了<strong>Top-P或核-采样。</strong></p>
@@ -514,7 +514,7 @@ I am from
 
 <p><img src="https://res.cloudinary.com/dsn0i1fsm/image/upload/v1692014779/blog/decoder/Untitled_6_ohntkd.png" alt="Untitled" /></p>
 
-<p>假设<script type="math/tex">p=0.92</script>，Top-p采样对单词概率进行降序排列并累加，然后选择概率和首次超过<script type="math/tex">p=92%</script>%的单词集作为采样池，定义为<script type="math/tex">V_{\text{top-p}}</script>。在<script type="math/tex">t=1</script>时<script type="math/tex">V_{\text{top-p}}</script>有9个词，而在<script type="math/tex">t=2</script>时它只需要选择前3个词就超过了<script type="math/tex">92%</script>%。其实很简单吧！可以看出，在单词比较不可预测时，它保留了更多的候选词，如<script type="math/tex">$$P(w\text{The})$$</script>，而当单词似乎更容易预测时，只保留了几个候选词，如<script type="math/tex">$$P(w\text{The}，\text{car})$$</script>。
+<p>假设<script type="math/tex">p=0.92</script>，Top-p采样对单词概率进行降序排列并累加，然后选择概率和首次超过<script type="math/tex">p=92%</script>%的单词集作为采样池，定义为<script type="math/tex">V_{\text{top-p}}</script>。在<script type="math/tex">t=1</script>时<script type="math/tex">V_{\text{top-p}}</script>有9个词，而在<script type="math/tex">t=2</script>时它只需要选择前3个词就超过了<script type="math/tex">92%</script>%。其实很简单吧！可以看出，在单词比较不可预测时，它保留了更多的候选词，如<script type="math/tex">P(w\text{The})</script>，而当单词似乎更容易预测时，只保留了几个候选词，如<script type="math/tex">P(w\text{The}，\text{car})</script>。
 
 <p>我们可以通过设置0 &lt; top_p &lt; 1来激活Top-p采样：</p>
 
