@@ -407,7 +407,7 @@
 
 <p><img src="https://res.cloudinary.com/dsn0i1fsm/image/upload/v1692014779/blog/decoder/Untitled_3_ylutyz.png" alt="Untitled" /></p>
 
-<p>很明显，使用采样方法时文本生成本身不再是确定性的。单词<script type="math/tex">\text{car}</script>从条件概率分布<script type="math/tex"></script>P(w\text{The})</script>中采样而得，而<script type="math/tex">\text{drivers}</script>则采样自<script type="math/tex">P(w\text{The}\space\text{car})。</script></p>
+<p>很明显，使用采样方法时文本生成本身不再是确定性的。单词<script type="math/tex">\text{car}</script>从条件概率分布<script type="math/tex">P(w\text{The})</script>中采样而得，而<script type="math/tex">\text{drivers}</script>则采样自<script type="math/tex">P(w\text{The}\space\text{car})。</script></p>
 
 <p>在transformers中，我们设置do_sample=True并通过设置top_k=0停用Top-K采样(稍后详细介绍)。在下文中，为便于复现，我们会固定random_seed=0，但你可以在自己的模型中随意更改random_seed。</p>
 
